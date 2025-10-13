@@ -1,0 +1,9 @@
+# Folders
+assembly/
+.cache/
+debug/
+test/
+bin/
+old/
+
+.clangd
