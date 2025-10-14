@@ -8,6 +8,8 @@ void parser_init(Parser *parser) {
     parser->pos = 0;
 }
 
+void parser_destroy(Parser *parser) { (void)parser; }
+
 void parser_log(Parser parser) {
     printf("Parser Log:\n");
     printf("  count - %ld\n", parser.count);
@@ -18,6 +20,7 @@ void parser_log(Parser parser) {
 void parser_log_tokens(Parser parser) {
     printf("Tokens found: %ld\n", parser.count);
     for (size_t i = 0; i < parser.count; ++i) {
+        printf("    ");
         token_log(parser.tokens[i]);
     }
 }

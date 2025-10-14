@@ -36,7 +36,7 @@ do {                                     \
     (sb)->string[(sb)->length++] = (c);  \
 } while (0)                              \
 
-#define SB_FREE(sb) \
+#define SB_FREE(sb)      \
 do {                     \
     free((sb)->string);  \
     (sb)->length = 0;    \

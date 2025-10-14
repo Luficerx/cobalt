@@ -6,10 +6,10 @@ CFLAGS = -I./include -L./lib/ $(CFLAGS_EXTRA)
 
 SRC = $(wildcard ./src/*.c)
 
-all: clean $(PROG)
-
 $(PROG): $(SRC)
 	$(CC) $(CFLAGS) $(SRC) -o $(PROG)
+
+all: clean $(PROG)
 
 clean:
 	@rm -f $(PROG)

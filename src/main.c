@@ -27,17 +27,11 @@ int main(int argc, char **argv) {
     parser_init(&parser);
     
     if (!lexer_tokenize(&lexer, &parser)) {
-        fprintf(stderr, "\033[0;31mfatal error:\033[0m could not parse file tokenize: %s\n", ct_file);
+        fprintf(stderr, "\033[0;31mfatal error:\033[0m could not tokenize file: %s\n", ct_file);
         return 1;
     }
-
-    printf("File Tokenized\n");
     parser_log_tokens(parser);
-    
-    // while (fgets(file_line, sizeof(file_line), fptr) != NULL) {
-    //     printf("\033[0;90m....\033[0m%s", file_line);
-    // }
-    
-    // fclose(fptr);
+    lexer_destroy(&lexer);
+    parser_destroy(&parser);
     return 0;
 }

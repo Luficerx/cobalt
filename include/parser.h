@@ -33,6 +33,8 @@ do {                                        \
 
 // FORWARD DECLARATION
 void parser_init(Parser *parser);
+void parser_destroy(Parser *parser);
+
 void parser_log(Parser parser);
 void parser_log_tokens(Parser parser);
 

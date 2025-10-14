@@ -1,9 +1,11 @@
+#include <stddef.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <stdbool.h>
 
 #include "lexer.h"
 #include "parser.h"
+#include "core.h"
 
 bool lexer_load_source(Lexer *lexer, const char *filepath) {
     FILE *fptr;
@@ -22,6 +24,8 @@ bool lexer_load_source(Lexer *lexer, const char *filepath) {
 }
 
 bool lexer_init(Lexer *lexer, const char *filepath) {
+    printf("Tokenizing file: "CORE_RED"%s"CORE_END"\n", filepath);
+    
     lexer->source = (StringBuilder){0};
     lexer->file = filepath;
     lexer->pos = 0;
@@ -33,240 +37,309 @@ bool lexer_init(Lexer *lexer, const char *filepath) {
 
     return true;
 }
-bool lexer_get_token(Token *token, char c) {
-    switch (c) {
-        case '{':
-            token->kind = TK_LCBRACE;
-            token->lexeme = "{";
-            return true;
-            
-        case '}':
-            token->kind = TK_RCBRACE;
-            token->lexeme = "}";
-            return true;
-            
-        case '(':
-            token->kind = TK_LPAREN;
-            token->lexeme = "(";
-            return true;
-            
-        case ')':
-            token->kind = TK_RPAREN;
-            token->lexeme = ")";
-            return true;
-            
-        case '[':
-            token->kind = TK_LSPAREN;
-            token->lexeme = "[";
-            return true;
-            
-        case ']':
-            token->kind = TK_RSPAREN;
-            token->lexeme = "]";
-            return true;
 
-        case ';':
-            token->kind = TK_SEMICOLON;
-            token->lexeme = ";";
-            return true;
-
-        case ':':
-            token->kind = TK_COLON;
-            token->lexeme = ":";
-            return true;
-
-        case ',':
-            token->kind = TK_COMMA;
-            token->lexeme = ",";
-            return true;
-    }
-    return false;
-}
-
-bool lexer_next_char_in_zero2nine(StringBuilder sb, size_t i) {
-    if (i > sb.length) return false;
-    char c = sb.string[i+1];
-    return (c >= '0' && c <= '9');
-}
-
-bool lexer_next_char_in_a2z(StringBuilder sb, size_t i) {
-    if (i > sb.length) return false;
-    char c = sb.string[i+1];
-    
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
-
-bool lexer_is_token(char c) { return strchr("{}()[];:,", c) != NULL; }
-bool lexer_next_char_is(StringBuilder sb, size_t i, char c) { 
-    if (i > sb.length) return false;
-    char next_c = sb.string[i+1];
-    return c == next_c;
- }
-
-bool lexer_next_char_is_token(StringBuilder sb, size_t i) {
-    if (i < sb.length) { return lexer_is_token(sb.string[i+1]); }
-    return false;
-}
-bool lexer_next_char_is_delim(StringBuilder sb, size_t i) { 
-    if (i < sb.length) { 
-        if (sb.string[i+1] == '\0') return true;
-        else if (sb.string[i+1] == ' ') return true;
-    }
-    return false;
+void lexer_destroy(Lexer *lexer) {
+    free(lexer->source.string);
 }
 
 bool lexer_tokenize(Lexer *lexer, Parser *parser) {
     StringBuilder sb = {0};
     Token token = {0};
-    
-    for (size_t i = 0; i < lexer->source.length; ++i) {
-        char c = lexer->source.string[i];
-    
-        if (sb.length > 0) {
-            switch (token.mode) {
-                case TM_STRING_LIT: { 
-                    SB_PUSH_CHAR(&sb, c);
+    TokenMode mode;
 
-                    if (c == '"') {
-                        SB_PUSH_CHAR(&sb, '\0');
-                        token.lexeme = strdup(sb.string);
-                        token.kind = TK_IDENTIFIER;
-                        
-                        PARSER_PUSH_TOKEN(parser, token);
-                        SB_CLEAR(&sb);
-                        token = (Token){0};
-                    }
-                    continue;
-                }
-                case TM_NUMBER_LIT: {
+    size_t column = 0;
+    
+    for (size_t i = 0; i <= lexer->source.length; ++i) {
+        char c = lexer->source.string[i];
+
+        switch (mode) {
+            case TM_NONE: break;
+
+            case TM_STRING_LIT: { 
+                if (c == '"') {
                     SB_PUSH_CHAR(&sb, c);
-                    if (!lexer_next_char_in_zero2nine(lexer->source, i)) {
-                        SB_PUSH_CHAR(&sb, '\0');
-                        token.lexeme = strdup(sb.string);
-                        token.kind = TK_NUMBER_LIT;
-                        
-                        PARSER_PUSH_TOKEN(parser, token);
-                        SB_CLEAR(&sb);
-                        token = (Token){0};
-                    }
-                    continue;
-                }
-                case TM_GENERIC: {
-                    SB_PUSH_CHAR(&sb, c);
+                    SB_PUSH_CHAR(&sb, '\0');
+                    token.lexeme = strdup(sb.string);
+                    token.kind = TK_STRING_LIT;
                     
-                    if (!lexer_next_char_in_a2z(lexer->source, i)) {
-                        SB_PUSH_CHAR(&sb, '\0');
-                        token.lexeme = strdup(sb.string);
+                    PARSER_PUSH_TOKEN(parser, token);
+                    SB_CLEAR(&sb);
+                    
+                    token = (Token){0};
+                    mode = TM_NONE;
+                    continue;
+                }
+                SB_PUSH_CHAR(&sb, c);
+                continue;
+            }
+
+            case TM_NUMBER_LIT: {
+                if (!isdigit(c) && c != '_') {
+                    SB_PUSH_CHAR(&sb, '\0');
+                    token.lexeme = strdup(sb.string);
+                    token.kind = TK_NUMBER_LIT;
+                    
+                    PARSER_PUSH_TOKEN(parser, token);
+                    SB_CLEAR(&sb);
+                    
+                    token = (Token){0};
+                    mode = TM_NONE;
+                    break;
+                } else {
+                    SB_PUSH_CHAR(&sb, c);
+                    continue;
+                }
+            }
+
+            case TM_HEX_LIT: {
+                if (!lexer_char_in_az(c) && !lexer_char_in_09(c)) {
+                    SB_PUSH_CHAR(&sb, '\0');
+                    token.lexeme = strdup(sb.string);
+                    token.kind = TK_HEX_LIT;
+                    
+                    PARSER_PUSH_TOKEN(parser, token);
+                    SB_CLEAR(&sb);
+                    
+                    token = (Token){0};
+                    mode = TM_NONE;
+                    break;
+                } else {
+                    SB_PUSH_CHAR(&sb, c);
+                    continue;        
+                }
+            }
+
+            case TM_MCOMMENT: {
+                if (c == '*' && lexer_next_char_is(lexer->source, i, '/')) {
+                    mode = TM_NONE;
+                    ++i;
+                    continue;
+                }
+                continue;
+            };
+
+            case TM_COMMENT: {
+                if (c != '\n') continue;
+                mode = TM_NONE;
+                continue;
+            }
+
+            case TM_GENERIC: {
+                if (!lexer_char_in_az(c) && !lexer_char_in_09(c) && (c != '_')) {
+                    SB_PUSH_CHAR(&sb, '\0');
+                    token.lexeme = strdup(sb.string);
+                    if (!lexer_lexeme_is_keyword(&token)) {
                         token.kind = TK_IDENTIFIER;
-                        
-                        PARSER_PUSH_TOKEN(parser, token);
-                        SB_CLEAR(&sb);
-                        token = (Token){0};
                     }
+                    
+                    PARSER_PUSH_TOKEN(parser, token);
+                    SB_CLEAR(&sb);
+                    
+                    token = (Token){0};
+                    mode = TM_NONE;
+                    break;
+                } else {
+                    SB_PUSH_CHAR(&sb, c);
                     continue;
                 }
             }
         }
+
+        // NOTE: At some degree it's safe to assume
+        // this reads the first character of a sequence.
+
+        if (isdigit(c)) {
+            SB_PUSH_CHAR(&sb, c);
+            
+            if (c == '0' && lexer_next_char_is(lexer->source, i, 'x')) mode = TM_HEX_LIT;
+            else mode = TM_NUMBER_LIT;
+            continue;
+        }
         
-        if (c == ' ' || c == '\n') continue;
+        if (c == '"') {
+            SB_PUSH_CHAR(&sb, c);
+            mode = TM_STRING_LIT;
+            continue;
+        }
         
-        if (lexer_is_token(c)) {
-            lexer_get_token(&token, c);
+        if (c == '\n')  column += 1;
+
+        if (c == '/' && lexer_next_char_is(lexer->source, i, '/')) {
+            mode = TM_COMMENT;
+            continue;
+        }
+
+        if (c == '/' && lexer_next_char_is(lexer->source, i, '*')) {
+            mode = TM_MCOMMENT;
+            continue;
+        }
+
+        if (lexer_char_in_az(c) || c == '_') {
+            SB_PUSH_CHAR(&sb, c);
+            mode = TM_GENERIC;
+            continue;
+        }
+
+        if (lexer_char_is(&token, c)) {
             PARSER_PUSH_TOKEN(parser, token);
             token = (Token){0};
             continue;
         }
-
-        SB_PUSH_CHAR(&sb, c);
-        token.column = 0;
-        token.line = i;
-
-        if (isdigit(c)) { token.mode = TM_NUMBER_LIT; }
-        else if (c == '"') { token.mode = TM_STRING_LIT; }
-        else { token.mode = TM_GENERIC; }
-
-        // if (lexer_get_token(&token, c)) {
-        //     token.line = i;
-        //     token.column = 0;
-            
-        //     PARSER_PUSH_TOKEN(parser, token);
-        //     token = (Token){0};
-        //     continue;
-        // } else { token = (Token){0}; }
-        
-    
-        // if (sb.length > 0 && (c == ' ' || c == '\n')) {
-        //     SB_PUSH_CHAR(&sb, '\0');
-        //     token.kind = IDENTIFIER;
-        //     token.lexeme = strdup(sb.string);
-
-        //     PARSER_PUSH_TOKEN(parser, token);
-        //     SB_CLEAR(&sb);
-
-        //     token = (Token){0};
-        //     continue;
-            
-        // } else if (c == ' ' || c == '\n') { } else {
-        //     SB_PUSH_CHAR(&sb, c);
-        //     continue;
-        // }
-
-        // if (!string_lit && c == '"') {
-        //     SB_PUSH_CHAR(&sb, c);
-            
-        //     token.line = i;
-        //     token.column = 0;
-        //     string_lit = true;
-        //     continue;
-
-        // } else if (string_lit) {
-        //     SB_PUSH_CHAR(&sb, c);
-        //     if (c == '"')  {
-        //         token.kind = STRING_LIT;
-        //         token.lexeme = strdup(sb.string);
-
-        //         PARSER_PUSH_TOKEN(parser, token);
-        //         SB_CLEAR(&sb);
-        //         token = (Token){0};
-        //         string_lit = false;
-        //     }
-        //     continue;
-        // }
-        
-        // if (!number_lit && isdigit(c)) {
-        //     SB_PUSH_CHAR(&sb, c);
-        //     token.line = i;
-        //     token.column = 0;
-        //     number_lit = true;
-        //     continue;
-            
-        // } else if (number_lit) {
-        //     if (!isdigit(c))  {
-        //         SB_PUSH_CHAR(&sb, '\0');
-        //         token.kind = NUMBER_LIT;
-        //         token.lexeme = strdup(sb.string);
-                
-        //         PARSER_PUSH_TOKEN(parser, token);
-        //         SB_CLEAR(&sb);
-        //         token = (Token){0};
-        //         number_lit = false;
-        //     } else { 
-        //         SB_PUSH_CHAR(&sb, c);  
-        //         continue;
-        //     }
-        // }
-        
-        // if (lexer_get_token(&token, c)) {
-        //     token.line = i;
-        //     token.column = 0;
-        //     PARSER_PUSH_TOKEN(parser, token);
-        //     token = (Token){0};
-
-        //     continue;
-        // }
     }
+
     SB_FREE(&sb);
     return true;
+}
+
+bool lexer_char_is(Token *token, char c) {
+    switch (c) {
+        case '{': {
+            token->lexeme = "{";
+            token->kind = TK_LCBRACE;
+            return true;
+        }
+        case '}': {
+            token->lexeme = "}";
+            token->kind = TK_RCBRACE;
+            return true;
+        }
+        case '(': {
+            token->lexeme = "(";
+            token->kind = TK_LPAREN;
+            return true;
+        }
+        case ')': {
+            token->lexeme = ")";
+            token->kind = TK_RPAREN;
+            return true;
+        }
+        case '[': {
+            token->lexeme = "[";
+            token->kind = TK_LSBRACE;
+            return true;
+        }
+        case ']': {
+            token->lexeme = "]";
+            token->kind = TK_RSBRACE;
+            return true;
+        }
+        case ':': {
+            token->lexeme = ":";
+            token->kind = TK_COLON;
+            return true;
+        }
+        case ';': {
+            token->lexeme = ";";
+            token->kind = TK_SEMICOLON;
+            return true;
+        }
+        case ',': {
+            token->lexeme = ",";
+            token->kind = TK_COMMA;
+            return true;
+        }
+        case '=': {
+            token->lexeme = "=";
+            token->kind = TK_ASSIGN_OP;
+            return true;
+        }
+        case '!': {
+            token->lexeme = "!";
+            token->kind = TK_NOT;
+            return true;
+        }
+        case '?': {
+            token->lexeme = "?";
+            token->kind = TK_QMARK;
+            return true;
+        }
+        case '>': {
+            token->lexeme = ">";
+            token->kind = TK_GREATER;
+            return true;
+        }
+        case '<': {
+            token->lexeme = "<";
+            token->kind = TK_LESSER;
+            return true;
+        }
+        case '+': {
+            token->lexeme = "+";
+            token->kind = TK_PLUS;
+            return true;
+        }
+        case '-': {
+            token->lexeme = "-";
+            token->kind = TK_MINUS;
+            return true;
+        }
+        case '*': {
+            token->lexeme = "*";
+            token->kind = TK_STAR;
+            return true;
+        }
+        case '%': {
+            token->lexeme = "%%";
+            token->kind = TK_MOD;
+            return true;
+        }
+        case '.': {
+            token->lexeme = ".";
+            token->kind = TK_DOT;
+            return true;
+        }
+        case '/': {
+            token->lexeme = "/";
+            token->kind = TK_SLASH;
+            return true;
+        }
+        case '@': {
+            token->lexeme = "@";
+            token->kind = TK_AT;
+            return true;
+        }
+        case '#': {
+            token->lexeme = "#";
+            token->kind = TK_HASH;
+            return true;
+        }
+        case '&': {
+            token->lexeme = "&";
+            token->kind = TK_AMPER;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool lexer_char_in_az(char c) {
+    return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
+}
+
+bool lexer_char_in_09(char c) {
+    return (c >= '0' && c <= '9');
+}
+
+bool lexer_lexeme_is_keyword(Token *token) {
+    if (strcmp("import", token->lexeme) == 0 ||
+        strcmp("static", token->lexeme) == 0 ||
+        strcmp("sizeof", token->lexeme) == 0 ||
+        strcmp("return", token->lexeme) == 0 ||
+        strcmp("const", token->lexeme)  == 0 ||
+        strcmp("macro", token->lexeme) == 0) {
+            token->kind = TK_KEYWORD;
+            return true;
+    }
+    return false;
+}
+
+bool lexer_next_char_is(StringBuilder sb, size_t i, char target) {
+    if (i >= sb.length) return false;
+    return (sb.string[i+1] == target);
+}
+
+bool lexer_char_space_or_nline(char c) {
+    return (c == ' ' || c == '\n');
 }
 
 void lexer_log(Lexer lexer) {
@@ -276,4 +349,8 @@ void lexer_log(Lexer lexer) {
     printf("Lexer Source:\n");
     printf("  length - %ld\n", lexer.source.length);
     printf("  bytes - %ld\n", lexer.source.size);
+}
+
+void lexer_log_char(char c) {
+    printf("%c\n", c);
 }
