@@ -45,7 +45,7 @@ void lexer_destroy(Lexer *lexer) {
 bool lexer_tokenize(Lexer *lexer, Parser *parser) {
     StringBuilder sb = {0};
     Token token = {0};
-    TokenMode mode;
+    TokenMode mode = 0;
 
     size_t column = 1;
     size_t pos = 0;
@@ -56,13 +56,14 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
 
         switch (mode) {
             case TM_NONE: break;
-
             case TM_STRING_LIT: { 
                 if (c == '\n') {
+                    SB_PUSH_CHAR(&sb, '\0');
+                    fprintf(stderr, "%s\n", sb.string);
                     fprintf(stderr, "%s:%ld:%ld"CORE_RED" fatal error: "CORE_END"Unterminated string literal\n", lexer->file, column, pos);
                     return false;
                 }
-                if (c == '"') {
+                if ((sb.string[0] == '"' && c == '"') || (sb.string[0] == '\'' && c == '\'')) {
                     SB_PUSH_CHAR(&sb, c);
                     SB_PUSH_CHAR(&sb, '\0');
                     token.lexeme = strdup(sb.string);
@@ -162,7 +163,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
             continue;
         }
         
-        if (c == '"') {
+        if (c == '"' || c == '\'') {
             SB_PUSH_CHAR(&sb, c);
             mode = TM_STRING_LIT;
             continue;
@@ -397,6 +398,10 @@ bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i) {
         }
     }
     return false;
+}
+
+void lexer_advance(StringBuilder *sb, StringBuilder sc, size_t *i) {
+    SB_PUSH_CHAR(sb, sc.string[++(*i)]);
 }
 
 bool lexer_char_in_az(char c) {

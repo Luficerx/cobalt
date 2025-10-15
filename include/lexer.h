@@ -22,6 +22,7 @@ bool lexer_init(Lexer *lexer, const char *filepath);
 void lexer_destroy(Lexer *lexer);
 
 bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i);
+void lexer_advance(StringBuilder *sb, StringBuilder sc, size_t *i);
 bool lexer_char_in_az(char c);
 bool lexer_char_in_09(char c);
 
