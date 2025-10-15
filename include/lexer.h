@@ -16,13 +16,12 @@ typedef struct Lexer {
 
 // FORWARD DECLARATION
 bool lexer_load_source(Lexer *lexer, const char *filepath);
-
 bool lexer_tokenize(Lexer *lexer, Parser *parser);
 
 bool lexer_init(Lexer *lexer, const char *filepath);
 void lexer_destroy(Lexer *lexer);
 
-bool lexer_char_is(Token *token, char c);
+bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i);
 bool lexer_char_in_az(char c);
 bool lexer_char_in_09(char c);
 

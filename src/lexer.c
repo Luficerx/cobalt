@@ -14,9 +14,14 @@ bool lexer_load_source(Lexer *lexer, const char *filepath) {
         fprintf(stderr, "\033[0;31mfatal error:\033[0m could not read file %s\n", filepath);
         return false;
     }
-
+    
     for (char c = fgetc(fptr); c != EOF; c = fgetc(fptr)) {
         SB_PUSH_CHAR(&lexer->source, c);
+    }
+
+    if (lexer->source.length == 0) {
+        fprintf(stderr, "\033[0;31mfatal error:\033[0m file is empty: %s\n", filepath);
+        return false;
     }
 
     fclose(fptr);
@@ -24,16 +29,11 @@ bool lexer_load_source(Lexer *lexer, const char *filepath) {
 }
 
 bool lexer_init(Lexer *lexer, const char *filepath) {
-    printf("Tokenizing file: "CORE_RED"%s"CORE_END"\n", filepath);
-    
     lexer->source = (StringBuilder){0};
     lexer->file = filepath;
     lexer->pos = 0;
     
-    if (!lexer_load_source(lexer, filepath)) { 
-        fprintf(stderr, "\033[0;31mlexer error:\033[0m could not parse file: %s", filepath);
-        return false; 
-    }
+    if (!lexer_load_source(lexer, filepath)) return false;
 
     return true;
 }
@@ -47,15 +47,21 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
     Token token = {0};
     TokenMode mode;
 
-    size_t column = 0;
+    size_t column = 1;
+    size_t pos = 0;
     
-    for (size_t i = 0; i <= lexer->source.length; ++i) {
+    for (size_t i = 0; i < lexer->source.length; ++i) {
         char c = lexer->source.string[i];
+        ++pos;
 
         switch (mode) {
             case TM_NONE: break;
 
             case TM_STRING_LIT: { 
+                if (c == '\n') {
+                    fprintf(stderr, "%s:%ld:%ld"CORE_RED" fatal error: "CORE_END"Unterminated string literal\n", lexer->file, column, pos);
+                    return false;
+                }
                 if (c == '"') {
                     SB_PUSH_CHAR(&sb, c);
                     SB_PUSH_CHAR(&sb, '\0');
@@ -162,7 +168,10 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
             continue;
         }
         
-        if (c == '\n')  column += 1;
+        if (c == '\n') {
+            column += 1;
+            pos = 0;
+        }
 
         if (c == '/' && lexer_next_char_is(lexer->source, i, '/')) {
             mode = TM_COMMENT;
@@ -180,7 +189,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
             continue;
         }
 
-        if (lexer_char_is(&token, c)) {
+        if (lexer_char_is(lexer->source, &token, c, &i)) {
             PARSER_PUSH_TOKEN(parser, token);
             token = (Token){0};
             continue;
@@ -191,7 +200,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
     return true;
 }
 
-bool lexer_char_is(Token *token, char c) {
+bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i) {
     switch (c) {
         case '{': {
             token->lexeme = "{";
@@ -239,13 +248,25 @@ bool lexer_char_is(Token *token, char c) {
             return true;
         }
         case '=': {
-            token->lexeme = "=";
-            token->kind = TK_ASSIGN_OP;
+            if (lexer_next_char_is(sb, *i, '=')) {
+                token->lexeme = "==";
+                token->kind = TK_EQUALS;
+                ++(*i);
+            } else {
+                token->lexeme = "=";
+                token->kind = TK_ASSIGN_OP;
+            }
             return true;
         }
         case '!': {
-            token->lexeme = "!";
-            token->kind = TK_NOT;
+            if (lexer_next_char_is(sb, *i, '=')) {
+                token->lexeme = "!=";
+                token->kind = TK_NEQUALS;
+                ++(*i);
+            } else {
+                token->lexeme = "!";
+                token->kind = TK_NOT;
+            }
             return true;
         }
         case '?': {
@@ -254,28 +275,71 @@ bool lexer_char_is(Token *token, char c) {
             return true;
         }
         case '>': {
-            token->lexeme = ">";
-            token->kind = TK_GREATER;
+            if (lexer_next_char_is(sb, *i, '=')) {
+                token->lexeme = ">=";
+                token->kind = TK_GEQUALS;
+                ++(*i);
+            } else if (lexer_next_char_is(sb, *i, '>')) {
+                token->lexeme = ">>";
+                token->kind = TK_RSHIFT;
+                ++(*i);
+            } else {
+                token->lexeme = ">";
+                token->kind = TK_GREATER;
+            }
             return true;
         }
         case '<': {
-            token->lexeme = "<";
-            token->kind = TK_LESSER;
+            if (lexer_next_char_is(sb, *i, '=')) {
+                token->lexeme = "<=";
+                token->kind = TK_LEQUALS;
+                ++(*i);
+            } else if (lexer_next_char_is(sb, *i, '<')) {
+                token->lexeme = "<<";
+                token->kind = TK_LSHIFT;
+                ++(*i);
+            } else {
+                token->lexeme = "<";
+                token->kind = TK_LESSER;
+            }
             return true;
         }
         case '+': {
-            token->lexeme = "+";
-            token->kind = TK_PLUS;
+            if (lexer_next_char_is(sb, *i, '+')) {
+                token->lexeme = "++";
+                token->kind = TK_INC_OP;
+                ++(*i);
+            } else {
+                token->lexeme = "+";
+                token->kind = TK_ADD;
+            }
             return true;
         }
         case '-': {
-            token->lexeme = "-";
-            token->kind = TK_MINUS;
+            if (lexer_next_char_is(sb, *i, '-')) {
+                token->lexeme = "--";
+                token->kind = TK_DEC_OP;
+                ++(*i);
+            } else {
+                token->lexeme = "-";
+                token->kind = TK_SUB;
+            }
             return true;
         }
         case '*': {
-            token->lexeme = "*";
-            token->kind = TK_STAR;
+            if (lexer_next_char_is(sb, *i, '=')) {
+                token->lexeme = "*=";
+                token->kind = TK_MULT_OP;
+                ++(*i);
+            } else {
+                token->lexeme = "*";
+                token->kind = TK_STAR;
+            }
+            return true;
+        }
+        case '^': {
+            token->lexeme = "^";
+            token->kind = TK_XOR;
             return true;
         }
         case '%': {
@@ -293,6 +357,17 @@ bool lexer_char_is(Token *token, char c) {
             token->kind = TK_SLASH;
             return true;
         }
+        case '|': {
+            if (lexer_next_char_is(sb, *i, '|')) {
+                token->lexeme = "||";
+                token->kind = TK_OR_OP;
+                ++(*i);
+            } else {
+                token->lexeme = "|";
+                token->kind = TK_PIPE;
+            }
+            return true;
+        }
         case '@': {
             token->lexeme = "@";
             token->kind = TK_AT;
@@ -304,8 +379,14 @@ bool lexer_char_is(Token *token, char c) {
             return true;
         }
         case '&': {
-            token->lexeme = "&";
-            token->kind = TK_AMPER;
+            if (lexer_next_char_is(sb, *i, '&')) {
+                token->lexeme = "&&";
+                token->kind = TK_AND_OP;
+                ++i;
+            } else {
+                token->lexeme = "&";
+                token->kind = TK_AMPER;
+            }
             return true;
         }
     }
@@ -322,14 +403,20 @@ bool lexer_char_in_09(char c) {
 
 bool lexer_lexeme_is_keyword(Token *token) {
     if (strcmp("import", token->lexeme) == 0 ||
-        strcmp("static", token->lexeme) == 0 ||
-        strcmp("sizeof", token->lexeme) == 0 ||
-        strcmp("return", token->lexeme) == 0 ||
-        strcmp("const", token->lexeme)  == 0 ||
-        strcmp("macro", token->lexeme) == 0) {
+    strcmp("static", token->lexeme) == 0 ||
+    strcmp("sizeof", token->lexeme) == 0 ||
+    strcmp("return", token->lexeme) == 0 ||
+    strcmp("const", token->lexeme)  == 0 ||
+    strcmp("macro", token->lexeme) == 0 ||
+
+    strcmp("if", token->lexeme)  == 0 ||
+    strcmp("elif", token->lexeme)  == 0 ||
+    strcmp("else", token->lexeme)  == 0 ||
+    strcmp("pass", token->lexeme)  == 0) {
             token->kind = TK_KEYWORD;
             return true;
     }
+    
     return false;
 }
 

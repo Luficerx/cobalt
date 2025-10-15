@@ -1,5 +1,6 @@
 CC = gcc
-PROG = bin/cobalt
+PROG_NAME = cobalt
+PROG = bin/$(PROG_NAME)
 
 CFLAGS_EXTRA = -Wall -Wextra -g
 CFLAGS = -I./include -L./lib/ $(CFLAGS_EXTRA)
@@ -11,8 +12,5 @@ $(PROG): $(SRC)
 
 all: clean $(PROG)
 
-clean:
-	@rm -f $(PROG)
-
-run: $(PROG)
-	./$(PROG) $(ARGS)
+sym:
+	ln -sf $(PROG) ./$(PROG_NAME)

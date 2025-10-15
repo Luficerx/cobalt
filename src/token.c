@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <string.h>
 
 #include "token.h"
 #include "core.h"
@@ -19,13 +18,16 @@ char* token_kind_name(TokenKind kind) {
         case TK_RCBRACE:    return "RCBRACE";
         case TK_SEMICOLON:  return "SEMICOLON";
         case TK_COLON:      return "COLON";
+        case TK_PIPE:       return "COLON";
         case TK_COMMA:      return "COMMA";
         case TK_DOT:        return "DOT";
-        case TK_PLUS:       return "PLUS";
-        case TK_MINUS:      return "MINUS";
+        case TK_ADD:        return "PLUS";
+        case TK_SUB:        return "MINUS";
         case TK_STAR:       return "STAR";
         case TK_SLASH:      return "SLASH";
         case TK_MOD:        return "MOD";
+        case TK_RSHIFT:     return "RSHIFT";
+        case TK_LSHIFT:     return "LSHIFT";
         case TK_GREATER:    return "GREATER";
         case TK_LESSER:     return "LESSER";
         case TK_ASSIGN_OP:  return "ASSIGN_OP";
@@ -43,6 +45,7 @@ char* token_kind_name(TokenKind kind) {
         case TK_HASH:       return "HASH";
         case TK_DSIGN:      return "DSIGN";
         case TK_AMPER:      return "AMPER";
+        case TK_XOR:        return "XOR";
         case TK_INC_OP:     return "INC_OP";
         case TK_DEC_OP:     return "DEC_OP";
     }

@@ -20,16 +20,20 @@ typedef enum TokenKind {
     TK_RCBRACE,   // }
     TK_SEMICOLON, // ;
     TK_COLON,     // :
+    TK_PIPE,      // |
     TK_COMMA,     // ,
     TK_DOT,       // .
     
     // Arithmetic
-    TK_PLUS,      // +
-    TK_MINUS,     // -
+    TK_ADD,       // +
+    TK_SUB,       // -
     TK_STAR,      // *
     TK_SLASH,     // /
     TK_MOD,       // %
     
+    TK_RSHIFT,    // >>
+    TK_LSHIFT,    // <<
+
     // Comparisson
     TK_GREATER,   // >
     TK_LESSER,    // <
@@ -55,6 +59,7 @@ typedef enum TokenKind {
     TK_HASH,      // #
     TK_DSIGN,     // $
     TK_AMPER,     // &
+    TK_XOR,       // ^
 
     // SPECIAL
     TK_INC_OP,    // ++

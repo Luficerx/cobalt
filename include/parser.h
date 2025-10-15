@@ -1,4 +1,5 @@
 #include <stddef.h>
+
 #include "token.h"
 
 #ifndef PARSER_H
@@ -10,6 +11,34 @@ typedef struct Parser {
     size_t size;
     size_t pos;
 } Parser;
+
+typedef enum PrecedenceOps {
+    PO_POSTFIX,        // x++  x--  ()  []  .  ->
+    PO_UNARY,          // ++x  --x  +x  -x  !  ~  *  &  sizeof
+    PO_MUL_DIV_MOD,    // *  /  %
+    PO_ADD_SUB,        // +  -
+
+    PO_SHIFT,          // <<  >>
+
+    PO_RELATIONAL,     // <  <=  >  >=
+
+    PO_EQUALITY,       // ==  !=
+
+    PO_BIT_AND,        // &
+    
+    PO_BIT_XOR,        // ^
+    
+    PO_BIT_OR,         // |
+    
+    PO_LOGICAL_AND,    // &&
+    
+    PO_LOGICAL_OR,     // ||
+    
+    PO_TERNARY,        // ? :
+    PO_ASSIGNMENT,     // =  +=  -=  *=  /=  etc.
+    
+    PO_COMMA,          // ,
+} PrecedenceOps;
 
 #define PARSER_PREP_ARRAY(ps_array, min_size)                                                             \
 do {                                                                                                      \

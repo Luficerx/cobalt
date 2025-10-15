@@ -23,13 +23,10 @@ int main(int argc, char **argv) {
     
     const char *ct_file = shift_arg(argc, argv);     
 
-    lexer_init(&lexer, ct_file);
+    if (!lexer_init(&lexer, ct_file)) return 1;
     parser_init(&parser);
+    if (!lexer_tokenize(&lexer, &parser)) return 1;
     
-    if (!lexer_tokenize(&lexer, &parser)) {
-        fprintf(stderr, "\033[0;31mfatal error:\033[0m could not tokenize file: %s\n", ct_file);
-        return 1;
-    }
     parser_log_tokens(parser);
     lexer_destroy(&lexer);
     parser_destroy(&parser);
