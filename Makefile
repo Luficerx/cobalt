@@ -11,6 +11,3 @@ $(PROG): $(SRC)
 	$(CC) $(CFLAGS) $(SRC) -o $(PROG)
 
 all: clean $(PROG)
-
-sym:
-	ln -sf $(PROG) ./$(PROG_NAME)
