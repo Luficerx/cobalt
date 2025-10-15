@@ -353,8 +353,14 @@ bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i) {
             return true;
         }
         case '/': {
-            token->lexeme = "/";
-            token->kind = TK_SLASH;
+            if (lexer_next_char_is(sb, *i, '=')) {
+                token->lexeme = "/=";
+                token->kind = TK_DIV_OP;
+                ++(*i);
+            } else {
+                token->lexeme = "/";
+                token->kind = TK_SLASH;
+            }
             return true;
         }
         case '|': {
