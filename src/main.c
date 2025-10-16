@@ -30,6 +30,8 @@ int main(int argc, char **argv) {
 
     if (!lexer_tokenize(&lexer, &parser)) return 1;
 
+    parser_log_tokens(parser);
+    
     ASTNode *it = malloc(sizeof(ASTNode));
     int iter = 0;
     while (ast_token(&parser).kind != TK_EOF) {
@@ -38,9 +40,8 @@ int main(int argc, char **argv) {
         if (iter > 0) printf("\n");
         ast_log(it, 0);
     }
-    printf("\n");
-    // it = ast_parse_stmt(&parser)
 
+    printf("\n");
 
     lexer_destroy(&lexer);
     parser_destroy(&parser);

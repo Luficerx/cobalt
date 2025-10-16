@@ -8,6 +8,7 @@
 
 typedef struct Parser Parser;
 typedef struct Token Token;
+typedef enum TokenMode TokenMode;
 
 typedef struct Lexer {
     StringBuilder source;
@@ -22,10 +23,11 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser);
 bool lexer_init(Lexer *lexer, const char *filepath);
 void lexer_destroy(Lexer *lexer);
 
-bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i);
+bool lexer_char_is(StringBuilder source, StringBuilder *sb, Token *token, char c, size_t *i, TokenMode *mode);
 void lexer_advance(StringBuilder *sb, StringBuilder sc, size_t *i);
 bool lexer_char_in_az(char c);
 bool lexer_char_in_09(char c);
+bool lexer_next_char_in_09(StringBuilder sb, size_t i);
 
 bool lexer_lexeme_is_keyword(Token *token);
 bool lexer_next_char_is(StringBuilder sb, size_t i, char target);

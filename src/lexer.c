@@ -88,7 +88,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
             }
 
             case TM_NUMBER_LIT: {
-                if (!isdigit(c) && c != '_') {
+                if (!isdigit(c) && c != '_' && sb.string[sb.length] != 'f' && c !='f') {
                     SB_PUSH_CHAR(&sb, '\0');
                     token.lexeme = strdup(sb.string);
                     token.kind = TK_NUMBER_LIT;
@@ -206,7 +206,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
             continue;
         }
 
-        if (lexer_char_is(lexer->source, &token, c, &i)) {
+        if (lexer_char_is(lexer->source, &sb, &token, c, &i, &mode)) {
             PARSER_PUSH_TOKEN(parser, token);
             token = (Token){0};
             continue;
@@ -217,7 +217,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
     return true;
 }
 
-bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i) {
+bool lexer_char_is(StringBuilder source, StringBuilder *sb, Token *token, char c, size_t *i, TokenMode *mode) {
     switch (c) {
         case '{': {
             token->lexeme = "{";
@@ -265,7 +265,7 @@ bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i) {
             return true;
         }
         case '=': {
-            if (lexer_next_char_is(sb, *i, '=')) {
+            if (lexer_next_char_is(source, *i, '=')) {
                 token->lexeme = "==";
                 token->kind = TK_EQUALS;
                 ++(*i);
@@ -276,7 +276,7 @@ bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i) {
             return true;
         }
         case '!': {
-            if (lexer_next_char_is(sb, *i, '=')) {
+            if (lexer_next_char_is(source, *i, '=')) {
                 token->lexeme = "!=";
                 token->kind = TK_NEQUALS;
                 ++(*i);
@@ -292,11 +292,11 @@ bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i) {
             return true;
         }
         case '>': {
-            if (lexer_next_char_is(sb, *i, '=')) {
+            if (lexer_next_char_is(source, *i, '=')) {
                 token->lexeme = ">=";
                 token->kind = TK_GEQUALS;
                 ++(*i);
-            } else if (lexer_next_char_is(sb, *i, '>')) {
+            } else if (lexer_next_char_is(source, *i, '>')) {
                 token->lexeme = ">>";
                 token->kind = TK_RSHIFT;
                 ++(*i);
@@ -307,11 +307,11 @@ bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i) {
             return true;
         }
         case '<': {
-            if (lexer_next_char_is(sb, *i, '=')) {
+            if (lexer_next_char_is(source, *i, '=')) {
                 token->lexeme = "<=";
                 token->kind = TK_LEQUALS;
                 ++(*i);
-            } else if (lexer_next_char_is(sb, *i, '<')) {
+            } else if (lexer_next_char_is(source, *i, '<')) {
                 token->lexeme = "<<";
                 token->kind = TK_LSHIFT;
                 ++(*i);
@@ -322,7 +322,7 @@ bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i) {
             return true;
         }
         case '+': {
-            if (lexer_next_char_is(sb, *i, '+')) {
+            if (lexer_next_char_is(source, *i, '+')) {
                 token->lexeme = "++";
                 token->kind = TK_INC_OP;
                 ++(*i);
@@ -333,10 +333,16 @@ bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i) {
             return true;
         }
         case '-': {
-            if (lexer_next_char_is(sb, *i, '-')) {
+            if (lexer_next_char_is(source, *i, '-')) {
                 token->lexeme = "--";
                 token->kind = TK_DEC_OP;
                 ++(*i);
+
+            } else if (lexer_next_char_in_09(source, *i)) {
+                SB_PUSH_CHAR(sb, c);
+                *mode = TM_NUMBER_LIT;
+                return false;
+
             } else {
                 token->lexeme = "-";
                 token->kind = TK_SUB;
@@ -344,7 +350,7 @@ bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i) {
             return true;
         }
         case '*': {
-            if (lexer_next_char_is(sb, *i, '=')) {
+            if (lexer_next_char_is(source, *i, '=')) {
                 token->lexeme = "*=";
                 token->kind = TK_MULT_OP;
                 ++(*i);
@@ -370,7 +376,7 @@ bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i) {
             return true;
         }
         case '/': {
-            if (lexer_next_char_is(sb, *i, '=')) {
+            if (lexer_next_char_is(source, *i, '=')) {
                 token->lexeme = "/=";
                 token->kind = TK_DIV_OP;
                 ++(*i);
@@ -381,7 +387,7 @@ bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i) {
             return true;
         }
         case '|': {
-            if (lexer_next_char_is(sb, *i, '|')) {
+            if (lexer_next_char_is(source, *i, '|')) {
                 token->lexeme = "||";
                 token->kind = TK_OR_OP;
                 ++(*i);
@@ -402,7 +408,7 @@ bool lexer_char_is(StringBuilder sb, Token *token, char c, size_t *i) {
             return true;
         }
         case '&': {
-            if (lexer_next_char_is(sb, *i, '&')) {
+            if (lexer_next_char_is(source, *i, '&')) {
                 token->lexeme = "&&";
                 token->kind = TK_AND_OP;
                 ++i;
@@ -426,6 +432,12 @@ bool lexer_char_in_az(char c) {
 
 bool lexer_char_in_09(char c) {
     return (c >= '0' && c <= '9');
+}
+
+bool lexer_next_char_in_09(StringBuilder sb, size_t i) {
+    if (i >= sb.length) return false;
+    char c = sb.string[i+1];
+    return lexer_char_in_09(c);
 }
 
 bool lexer_lexeme_is_keyword(Token *token) {

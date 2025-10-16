@@ -23,7 +23,7 @@ void parser_log(Parser parser) {
 
 void parser_log_tokens(Parser parser) {
     printf("Tokens found: %ld\n", parser.count);
-    for (size_t i = 0; i < parser.count; ++i) {
+    for (size_t i = 0; i < parser.count-1; ++i) {
         printf("    ");
         token_log(parser.tokens[i]);
     }
