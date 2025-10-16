@@ -1,10 +1,10 @@
+#ifndef SB_H
+#define SB_H
+
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
-#ifndef SB_H
-#define SB_H
 
 #ifndef SB_DEFAULT_SIZE
     #define SB_DEFAULT_SIZE 512
@@ -28,25 +28,25 @@ do {                                                                            
         (sb_array)->string = realloc((sb_array)->string, (sb_array)->size * sizeof(*(sb_array)->string)); \
         assert((sb_array)->string != NULL);                                                               \
     }                                                                                                     \
-} while (0)                                                                                               \
+} while (0)
 
 #define SB_PUSH_CHAR(sb, c)              \
 do {                                     \
     SB_PREP_ARRAY((sb), (sb)->length+1); \
     (sb)->string[(sb)->length++] = (c);  \
-} while (0)                              \
+} while (0)
 
 #define SB_FREE(sb)      \
 do {                     \
     free((sb)->string);  \
     (sb)->length = 0;    \
     (sb)->size = 0;      \
-} while (0)              \
+} while (0)
 
 #define SB_CLEAR(sb)                     \
 do {                                     \
     memset((sb)->string, 0, (sb)->size); \
     (sb)->length = 0;                    \
-} while (0)                              \
+} while (0)
 
 #endif //SB_H

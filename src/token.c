@@ -48,6 +48,7 @@ char* token_kind_name(TokenKind kind) {
         case TK_XOR:        return "XOR";
         case TK_INC_OP:     return "INC_OP";
         case TK_DEC_OP:     return "DEC_OP";
+        case TK_EOF:        return "EOF";
     }
     return "UNREACHABLE";
 }

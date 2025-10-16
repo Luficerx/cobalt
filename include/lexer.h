@@ -1,12 +1,13 @@
+#ifndef LEXER_H
+#define LEXER_H
+
 #include <stddef.h>
 #include <stdbool.h>
 
-#include "parser.h"
-#include "token.h"
 #include "sb.h"
 
-#ifndef LEXER_H
-#define LEXER_H
+typedef struct Parser Parser;
+typedef struct Token Token;
 
 typedef struct Lexer {
     StringBuilder source;

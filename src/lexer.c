@@ -6,6 +6,8 @@
 #include "lexer.h"
 #include "parser.h"
 #include "core.h"
+#include "sb.h"
+#include "token.h"
 
 bool lexer_load_source(Lexer *lexer, const char *filepath) {
     FILE *fptr;
@@ -15,9 +17,14 @@ bool lexer_load_source(Lexer *lexer, const char *filepath) {
         return false;
     }
     
-    for (char c = fgetc(fptr); c != EOF; c = fgetc(fptr)) {
+    char c;
+
+    for (c = fgetc(fptr); c != EOF; c = fgetc(fptr)) {
         SB_PUSH_CHAR(&lexer->source, c);
     }
+
+    // Push EOF into the string;
+    SB_PUSH_CHAR(&lexer->source, c);
 
     if (lexer->source.length == 0) {
         fprintf(stderr, "\033[0;31mfatal error:\033[0m file is empty: %s\n", filepath);
@@ -151,10 +158,19 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
                 }
             }
         }
-
+        
         // NOTE: At some degree it's safe to assume
         // this reads the first character of a sequence.
+        
+        if (c == EOF) {
+            token.lexeme = "EOF";
+            token.kind = TK_EOF;
 
+            PARSER_PUSH_TOKEN(parser, token);
+            token = (Token){0};
+            continue;
+        }
+        
         if (isdigit(c)) {
             SB_PUSH_CHAR(&sb, c);
             

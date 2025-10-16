@@ -1,5 +1,9 @@
 #include <stdio.h>
+#include <stdbool.h>
+
 #include "parser.h"
+#include "token.h"
+#include "ast.h"
 
 void parser_init(Parser *parser) {
     parser->tokens = NULL;

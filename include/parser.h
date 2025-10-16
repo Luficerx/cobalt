@@ -1,9 +1,11 @@
-#include <stddef.h>
-
-#include "token.h"
-
 #ifndef PARSER_H
 #define PARSER_H
+
+#include <stddef.h>
+#include <stdbool.h>
+
+typedef struct Token Token;
+typedef struct ASTNode ASTNode;
 
 typedef struct Parser {
     Token *tokens;
@@ -52,13 +54,13 @@ do {                                                                            
         (ps_array)->tokens = realloc((ps_array)->tokens, (ps_array)->size * sizeof(*(ps_array)->tokens)); \
         assert((ps_array)->tokens != NULL);                                                               \
     }                                                                                                     \
-} while (0)                                                                                               \
+} while (0)
 
 #define PARSER_PUSH_TOKEN(ps, tk)           \
 do {                                        \
     PARSER_PREP_ARRAY((ps), (ps)->count+1); \
     (ps)->tokens[(ps)->count++] = (tk);     \
-} while (0)                                 \
+} while (0)
 
 // FORWARD DECLARATION
 void parser_init(Parser *parser);

@@ -64,6 +64,7 @@ typedef enum TokenKind {
     // SPECIAL
     TK_INC_OP,    // ++
     TK_DEC_OP,    // --
+    TK_EOF,       // End of File
 
 } TokenKind;
 
