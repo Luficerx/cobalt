@@ -6,7 +6,7 @@
 #include "ast.h"
 
 void parser_init(Parser *parser) {
-    parser->tokens = NULL;
+    parser->items = NULL;
     parser->count = 0;
     parser->size = 0;
     parser->pos = 0;
@@ -23,8 +23,8 @@ void parser_log(Parser parser) {
 
 void parser_log_tokens(Parser parser) {
     printf("Tokens found: %ld\n", parser.count);
-    for (size_t i = 0; i < parser.count-1; ++i) {
+    for (size_t i = 0; i < parser.count; ++i) {
         printf("    ");
-        token_log(parser.tokens[i]);
+        token_log(parser.items[i]);
     }
 }

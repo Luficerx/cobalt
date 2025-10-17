@@ -5,9 +5,10 @@
 
 #include "lexer.h"
 #include "parser.h"
+#include "token.h"
 #include "core.h"
 #include "sb.h"
-#include "token.h"
+#include "da.h"
 
 bool lexer_load_source(Lexer *lexer, const char *filepath) {
     FILE *fptr;
@@ -76,7 +77,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
                     token.lexeme = strdup(sb.string);
                     token.kind = TK_STRING_LIT;
                     
-                    PARSER_PUSH_TOKEN(parser, token);
+                    DA_APPEND(parser, token);
                     SB_CLEAR(&sb);
                     
                     token = (Token){0};
@@ -93,7 +94,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
                     token.lexeme = strdup(sb.string);
                     token.kind = TK_NUMBER_LIT;
                     
-                    PARSER_PUSH_TOKEN(parser, token);
+                    DA_APPEND(parser, token);
                     SB_CLEAR(&sb);
                     
                     token = (Token){0};
@@ -111,7 +112,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
                     token.lexeme = strdup(sb.string);
                     token.kind = TK_HEX_LIT;
                     
-                    PARSER_PUSH_TOKEN(parser, token);
+                    DA_APPEND(parser, token);
                     SB_CLEAR(&sb);
                     
                     token = (Token){0};
@@ -133,8 +134,13 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
             };
 
             case TM_COMMENT: {
-                if (c != '\n') continue;
-                mode = TM_NONE;
+                if ((lexer_next_char_is(lexer->source, i, EOF))) {
+                    SB_PUSH_CHAR(&sb, c);
+                    mode = TM_NONE;
+                }
+
+                if (c == '\n') { mode = TM_NONE; }
+
                 continue;
             }
 
@@ -146,7 +152,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
                         token.kind = TK_IDENTIFIER;
                     }
                     
-                    PARSER_PUSH_TOKEN(parser, token);
+                    DA_APPEND(parser, token);
                     SB_CLEAR(&sb);
                     
                     token = (Token){0};
@@ -166,7 +172,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
             token.lexeme = "EOF";
             token.kind = TK_EOF;
 
-            PARSER_PUSH_TOKEN(parser, token);
+            DA_APPEND(parser, token);
             token = (Token){0};
             continue;
         }
@@ -207,7 +213,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
         }
 
         if (lexer_char_is(lexer->source, &sb, &token, c, &i, &mode)) {
-            PARSER_PUSH_TOKEN(parser, token);
+            DA_APPEND(parser, token);
             token = (Token){0};
             continue;
         }
