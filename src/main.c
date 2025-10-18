@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
     
     printf("──────────────────────────────\n");
 
-    ASTNode *it = malloc(sizeof(ASTNode));
+    ASTNode *it;
     while (ast_token(&parser).kind != TK_EOF) {
         if (parser.pos > 0) printf("\n");
         it = ast_parse_stmt(&parser);

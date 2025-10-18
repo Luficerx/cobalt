@@ -12,13 +12,14 @@ typedef enum ASTType {
     T_STMT,
     T_EXPR,
 
-    T_COMPOSED_DECL,
+    T_MDECLARATION,
     T_DECLARATION,
     T_ASSIGNMENT,
 
     T_BINARY_OP,
 
     T_NUMBER,
+    T_STRING,
     T_HEXADECIMAL,
     T_IDENTIFIER,
 
@@ -43,12 +44,11 @@ typedef struct ASTNode {
     union {
         char *identifier;
         char *op;
-        int number;
     } data;
 
     union {
         char *string;
-        int *number;
+        int number;
     } raw_value;
 
     ASTNode *value;
@@ -72,22 +72,23 @@ ASTNode *ast_parse_assignment(Parser *parser);
 // Nodes
 
 ASTNode *ast_statement_node(ASTNode *expr);
-ASTNode *ast_declaration_node(ASTNode *base_type, ASTNode *left, ASTNode *right, ASTNodes *declarators);
-ASTNode *ast_composed_decl_node(ASTNode *left, ASTNode *right);
+ASTNode *ast_declaration_node(ASTNode *left, ASTNode *right, ASTNode *value);
+ASTNode *ast_multi_declaration_node(ASTNode *base_type, ASTNode *left, ASTNode *right, ASTNodes *declarators);
 ASTNode *ast_assignment_node(ASTNode *left, ASTNode *right);
 
 ASTNode *ast_binary_op_node(Token token, ASTNode *left, ASTNode *right);
 
-ASTNode *ast_identifier_node(char *identifier);
+ASTNode *ast_identifier_node(ASTNode *base_type, char *identifier);
 ASTNode *ast_hexadecimal_node(int number);
 ASTNode *ast_number_node(int number);
+ASTNode *ast_string_node(char *string);
 
 ASTNode *ast_parse_primary(Parser *parser);
 ASTNodes *ast_new_declarators();
 
 Token ast_token(Parser *parser);
 Token ast_next_token(Parser *parser);
-void ast_expect(Token token, TokenKind target, char *lexeme);
+void ast_expect(Token token, TokenKind target, char *lexeme, int line);
 void ast_advance(Parser *parser, int line);
 void ast_log(ASTNode *node, int indent);
 void ast_log_declarators(ASTNodes *declarators, int indent);

@@ -15,25 +15,60 @@ ASTNode *ast_parse_stmt(Parser *parser) {
     Token token = ast_token(parser);
     
     if (token.kind == TK_IDENTIFIER) {
+        // int x;
+        // ^~~
+        
+        if (ast_next_token(parser).kind == TK_IDENTIFIER) {
+            ASTNode *base_type = ast_identifier_node(NULL, token.lexeme);
+
+            ast_advance(parser, __LINE__);
+            
+            token = ast_token(parser);
+            ASTNode *node = ast_identifier_node(base_type, token.lexeme);
+            
+            ast_advance(parser, __LINE__);
+            
+            if (ast_token(parser).kind == TK_ASSIGN_OP) {
+                ast_advance(parser, __LINE__);
+
+                ASTNode *expr = ast_parse_expr(parser);
+                ASTNode *decl = ast_declaration_node(node, expr, expr->value);
+                
+                ast_expect(ast_token(parser), TK_SEMICOLON, ";", __LINE__);
+                ast_advance(parser, __LINE__);
+                
+                return decl;
+            }
+
+            // if (ast_token(parser).kind == TK_COMMA) {
+                 // Multi declaration
+                 // int x, y, z;
+
+
+            // }
+
+            ast_expect(ast_token(parser), TK_SEMICOLON, ";", __LINE__);
+            ast_advance(parser, __LINE__);
+            ASTNode *decl = ast_declaration_node(NULL, NULL, node);
+            return decl;
+        }
+
         if (ast_next_token(parser).kind == TK_ASSIGN_OP) {
+            // Assignment
+            // x = 1;
+
             ASTNode *left = ast_parse_assignment(parser);
 
             ast_advance(parser, __LINE__);
             ASTNode *right = ast_parse_expr(parser);
 
             token = ast_token(parser);
-            ast_expect(token, TK_SEMICOLON, ";");
+            ast_expect(token, TK_SEMICOLON, ";", __LINE__);
             ast_advance(parser, __LINE__);
             return ast_assignment_node(left, right);
         }
 
-        if (ast_next_token(parser).kind == TK_IDENTIFIER) {
-            ASTNode *decl = ast_parse_declaration(parser);
-            ast_advance(parser, __LINE__);
-            return decl;
-        }
-
-        fprintf(stderr, "error: Invalid value: %s\n", ast_token(parser).lexeme);
+        fprintf(stderr, "error: Invalid value: %s : %d\n", ast_token(parser).lexeme, __LINE__);
         exit(1);
     }
     
@@ -41,22 +76,25 @@ ASTNode *ast_parse_stmt(Parser *parser) {
     
     ASTNode *expr = ast_parse_expr(parser);
     token = ast_token(parser);
-    ast_expect(token, TK_SEMICOLON, ";");
+    ast_expect(token, TK_SEMICOLON, ";", __LINE__);
     ast_advance(parser, __LINE__);
 
     return ast_statement_node(expr);
 }
 
 ASTNode *ast_parse_declaration(Parser *parser) {
+    return NULL;
+}
+
+ASTNode *ast_parse_multi_declaration(Parser *parser) {
     ASTNodes *declarators = ast_new_declarators();
     
     Token type_token = ast_token(parser);
-    ASTNode *type_node = ast_identifier_node(type_token.lexeme);
+    ASTNode *type_node = ast_identifier_node(NULL, type_token.lexeme);
+    ASTNode *decl = ast_multi_declaration_node(type_node, NULL, NULL, declarators);
     
-    ASTNode *decl = ast_declaration_node(type_node, NULL, NULL, declarators);
-
     ast_advance(parser, __LINE__);
-
+    
     while (ast_token(parser).kind == TK_IDENTIFIER) {
         ast_parse_declarator(declarators, parser);
 
@@ -71,10 +109,10 @@ ASTNode *ast_parse_declaration(Parser *parser) {
             ast_advance(parser, __LINE__);
             ASTNode *value = ast_parse_expr(parser);
             decl->value = value;
-            break;
+            continue;
         };
 
-        fprintf(stderr, "\n"CORE_RED"error: "CORE_END"unknown symbol:"CORE_RED" '%s' "CORE_END"\n", ast_token(parser).lexeme);
+        fprintf(stderr, "\n"CORE_RED"error: "CORE_END"unknown symbol:"CORE_RED" '%s' "CORE_END" : %d\n", ast_token(parser).lexeme, __LINE__);
         exit(1);
     }
 
@@ -83,7 +121,7 @@ ASTNode *ast_parse_declaration(Parser *parser) {
 
 void ast_parse_declarator(ASTNodes *declarators, Parser *parser) {
     Token token = ast_token(parser);
-    ASTNode *declarator = ast_identifier_node(token.lexeme);
+    ASTNode *declarator = ast_identifier_node(NULL, token.lexeme);
     DA_APPEND(declarators, *declarator);
     ast_advance(parser, __LINE__);
 }
@@ -91,7 +129,7 @@ void ast_parse_declarator(ASTNodes *declarators, Parser *parser) {
 ASTNode *ast_parse_assignment(Parser *parser) {
     Token token = ast_token(parser);
     ast_advance(parser, __LINE__);
-    return ast_identifier_node(token.lexeme);
+    return ast_identifier_node(NULL, token.lexeme);
 }
 
 ASTNode *ast_parse_expr(Parser *parser) {
@@ -129,9 +167,14 @@ ASTNode *ast_parse_factor(Parser *parser) {
         return ast_number_node(number);
     }
 
+    if (token.kind == TK_STRING_LIT) {
+        ast_advance(parser, __LINE__);
+        return ast_string_node(token.lexeme);
+    }
+
     if (token.kind == TK_IDENTIFIER) {
         ast_advance(parser, __LINE__);
-        return ast_identifier_node(token.lexeme);
+        return ast_identifier_node(NULL, token.lexeme);
     }
 
     if (token.kind == TK_HEX_LIT) {
@@ -144,14 +187,14 @@ ASTNode *ast_parse_factor(Parser *parser) {
         ast_advance(parser, __LINE__);
         ASTNode *expr = ast_parse_expr(parser);
         if (ast_token(parser).kind != TK_RPAREN) {
-            fprintf(stderr, "error: expected closing paren "CORE_RED"')'"CORE_END".\n");
+            fprintf(stderr, "error: expected closing paren "CORE_RED"')'"CORE_END".%d\n", __LINE__);
             exit(1);
         }
         ast_advance(parser, __LINE__);
         return expr;
     }
 
-    fprintf(stderr, "\n"CORE_RED"error: "CORE_END"unknown symbol:"CORE_RED" '%s' "CORE_END"\n", ast_token(parser).lexeme);
+    fprintf(stderr, "\n"CORE_RED"error: "CORE_END"unknown symbol:"CORE_RED" '%s' "CORE_END" : %d\n", ast_token(parser).lexeme, __LINE__);
     exit(1);
 }
 
@@ -166,16 +209,28 @@ ASTNode *ast_statement_node(ASTNode *expr) {
     return node;
 }
 
-ASTNode *ast_declaration_node(ASTNode *base_type, ASTNode *left, ASTNode *right, ASTNodes *declarators) {
+ASTNode *ast_declaration_node(ASTNode *left, ASTNode *right, ASTNode *value) {
     ASTNode *node = malloc(sizeof(ASTNode));
     node->type = T_DECLARATION;
 
-    node->base_type = base_type;
-    node->declarators = declarators;
+    node->base_type = NULL;
+    node->declarators = NULL;
 
     node->expr = NULL;
     node->left = left;
     node->right = right;
+
+    node->value = value;
+
+    return node;
+}
+
+ASTNode *ast_multi_declaration_node(ASTNode *base_type, ASTNode *left, ASTNode *right, ASTNodes *declarators) {
+    ASTNode *node = malloc(sizeof(ASTNode));
+    (void)base_type;
+    (void)left;
+    (void)right;
+    (void)declarators;
 
     return node;
 }
@@ -205,10 +260,11 @@ ASTNode *ast_binary_op_node(Token token, ASTNode *left, ASTNode *right) {
     return node;
 }
 
-ASTNode *ast_identifier_node(char *identifier) {
+ASTNode *ast_identifier_node(ASTNode *base_type, char *identifier) {
     ASTNode *node = malloc(sizeof(ASTNode));
     node->type = T_IDENTIFIER;
-    
+    node->base_type = base_type;
+
     node->left = NULL;
     node->right = NULL;
     
@@ -224,7 +280,7 @@ ASTNode *ast_hexadecimal_node(int number) {
     node->left = NULL;
     node->right = NULL;
     
-    node->data.number = number;
+    node->raw_value.number = number;
 
     return node;
 }
@@ -236,7 +292,19 @@ ASTNode *ast_number_node(int number) {
     node->left = NULL;
     node->right = NULL;
     
-    node->data.number = number;
+    node->raw_value.number = number;
+
+    return node;
+}
+
+ASTNode *ast_string_node(char *string) {
+    ASTNode *node = malloc(sizeof(ASTNode));
+    node->type = T_STRING;
+    
+    node->left = NULL;
+    node->right = NULL;
+    
+    node->raw_value.string = string;
 
     return node;
 }
@@ -263,9 +331,9 @@ ASTNodes *ast_new_declarators() {
 Token ast_token(Parser *parser) { return parser->items[parser->pos]; }
 Token ast_next_token(Parser *parser) { return parser->items[parser->pos+1]; }
 
-void ast_expect(Token token, TokenKind target, char *lexeme) {
+void ast_expect(Token token, TokenKind target, char *lexeme, int line) {
     if (token.kind != target) {
-        fprintf(stderr, "error: expected "CORE_RED"'%s'"CORE_END" but got "CORE_RED"'%s'"CORE_END"\n", lexeme, token.lexeme);
+        fprintf(stderr, "error: expected "CORE_RED"'%s'"CORE_END" but got "CORE_RED"'%s'"CORE_END" : %d\n", lexeme, token.lexeme, line);
         exit(1);
     }
 }
@@ -289,11 +357,15 @@ void ast_log(ASTNode *node, int indent) {
     // Print the node based on its type
     switch (node->type) {
         case T_NUMBER:
-            printf("NUMBER: %d\n", node->data.number);
+            printf("NUMBER: %d\n", node->raw_value.number);
+            break;
+
+        case T_STRING:
+            printf("STRING: %s\n", node->raw_value.string);
             break;
 
         case T_HEXADECIMAL:
-            printf("NUMBER: %X\n", node->data.number);
+            printf("NUMBER: %X\n", node->raw_value.number);
             break;
             
         case T_BINARY_OP:
@@ -304,8 +376,9 @@ void ast_log(ASTNode *node, int indent) {
             
         case T_IDENTIFIER:
             printf("IDENTIFIER: %s\n", node->data.identifier);
+            if (node->base_type) ast_log(node->base_type, indent + 1);
             break;
-
+            
         case T_EXPR:
             printf("EXPR\n");
             // Print the expression if it has one
@@ -314,19 +387,17 @@ void ast_log(ASTNode *node, int indent) {
             }
             break;
             
-        case T_COMPOSED_DECL:
+        case T_MDECLARATION:
             printf("COMPOSED_DECL:\n");
             if (node->left) ast_log(node->left, indent + 1);
             if (node->right) ast_log(node->right, indent + 1);
             break;
-
+            
         case T_DECLARATION:
             printf("DECLARATION:\n");
-            ast_log(node->base_type, indent + 1);
-            if (node->value) {
-                ast_log(node->value, indent+1);
-            }
-            ast_log_declarators(node->declarators, indent+1);
+            if (node->value) ast_log(node->value, indent + 1);
+            if (node->left) ast_log(node->left, indent + 1);
+            if (node->right) ast_log(node->right, indent + 1);
             break;
 
         case T_ASSIGNMENT:
