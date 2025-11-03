@@ -68,8 +68,16 @@ ASTNode *ast_parse_stmt(Parser *parser) {
             return ast_assignment_node(left, right);
         }
 
-        fprintf(stderr, "error: Invalid value: %s : %d\n", ast_token(parser).lexeme, __LINE__);
-        exit(1);
+        if (ast_next_token(parser).kind == TK_LPAREN) {
+            ASTNode *call = ast_parse_call(parser);
+            ast_expect(ast_token(parser), TK_SEMICOLON, ";", __LINE__);
+            ast_advance(parser, __LINE__);
+            return call;
+        }
+
+        // ast_expect(ast_next_token(parser), TK_SEMICOLON, ";", __LINE__);
+        // fprintf(stderr, "error: Invalid value: %s : %d\n", ast_next_token(parser).lexeme, __LINE__);
+        // exit(1);
     }
     
     // Expression
@@ -83,7 +91,41 @@ ASTNode *ast_parse_stmt(Parser *parser) {
 }
 
 ASTNode *ast_parse_declaration(Parser *parser) {
+    (void)parser;
     return NULL;
+}
+
+ASTNode *ast_parse_call(Parser *parser) {
+    ast_advance(parser, __LINE__);
+    
+    Token token = ast_token(parser);
+    
+    if (token.kind == TK_LPAREN) {
+        ast_advance(parser, __LINE__);
+        if (ast_token(parser).kind == TK_RPAREN) {
+            ASTNode *expr = ast_empty_expr_node();
+            ast_advance(parser, __LINE__);
+            return expr;
+        }
+        
+        ASTNode *expr = ast_parse_expr(parser);
+
+        if (ast_token(parser).kind != TK_RPAREN) {
+            fprintf(stderr, "error: expected closing paren "CORE_RED"')'"CORE_END".%d\n", __LINE__);
+            exit(1);
+        }
+
+        ast_advance(parser, __LINE__);
+        return expr;
+    }
+    
+    // Unknown for now
+    ASTNode *expr = ast_parse_expr(parser);
+    token = ast_token(parser);
+    ast_expect(token, TK_SEMICOLON, ";", __LINE__);
+    ast_advance(parser, __LINE__);
+
+    return ast_statement_node(expr);
 }
 
 ASTNode *ast_parse_multi_declaration(Parser *parser) {
@@ -112,6 +154,7 @@ ASTNode *ast_parse_multi_declaration(Parser *parser) {
             continue;
         };
 
+        fprintf(stderr, "ast_parse_multi_declaration");
         fprintf(stderr, "\n"CORE_RED"error: "CORE_END"unknown symbol:"CORE_RED" '%s' "CORE_END" : %d\n", ast_token(parser).lexeme, __LINE__);
         exit(1);
     }
@@ -185,6 +228,12 @@ ASTNode *ast_parse_factor(Parser *parser) {
 
     if (token.kind == TK_LPAREN) {
         ast_advance(parser, __LINE__);
+        if (ast_token(parser).kind == TK_RPAREN) {
+            ASTNode *expr = ast_empty_expr_node();
+            ast_advance(parser, __LINE__);
+            return expr;
+        }
+        
         ASTNode *expr = ast_parse_expr(parser);
         if (ast_token(parser).kind != TK_RPAREN) {
             fprintf(stderr, "error: expected closing paren "CORE_RED"')'"CORE_END".%d\n", __LINE__);
@@ -194,6 +243,7 @@ ASTNode *ast_parse_factor(Parser *parser) {
         return expr;
     }
 
+    fprintf(stderr, "ast_parse_factor");
     fprintf(stderr, "\n"CORE_RED"error: "CORE_END"unknown symbol:"CORE_RED" '%s' "CORE_END" : %d\n", ast_token(parser).lexeme, __LINE__);
     exit(1);
 }
@@ -309,6 +359,21 @@ ASTNode *ast_string_node(char *string) {
     return node;
 }
 
+ASTNode *ast_empty_expr_node() {
+    ASTNode *node = malloc(sizeof(ASTNode));
+    node->type = T_EXPR;
+    
+    node->base_type = NULL;
+    node->declarators = NULL;
+
+    node->left = NULL;
+    node->right = NULL;
+    
+    node->value = NULL;
+
+    return node;
+}
+
 // ASTNode *ast_parse_primary(Parser *parser) {
     //     if (ast_token(parser).kind == TK_NUMBER_LIT) {
 //         Token token = ast_token(parser);
@@ -333,7 +398,10 @@ Token ast_next_token(Parser *parser) { return parser->items[parser->pos+1]; }
 
 void ast_expect(Token token, TokenKind target, char *lexeme, int line) {
     if (token.kind != target) {
-        fprintf(stderr, "error: expected "CORE_RED"'%s'"CORE_END" but got "CORE_RED"'%s'"CORE_END" : %d\n", lexeme, token.lexeme, line);
+        #ifdef COMPILER_FUNCTION_ERROR
+        fprintf(stderr, "Failed at 'ast_expect' at line: %d\n", line);
+        #endif
+        fprintf(stderr, "error: expected "CORE_RED"'%s'"CORE_END" but got "CORE_RED"'%s'"CORE_END" at %ld:%ld\n", lexeme, token.lexeme, token.column, token.line);
         exit(1);
     }
 }
@@ -346,16 +414,21 @@ void ast_advance(Parser *parser, int line) {
     }
 }
 
+void ast_log_indent(int indent) {
+    for (int i = 0; i < indent; i++) printf("  ");
+}
+
 void ast_log(ASTNode *node, int indent) {
     if (node == NULL) return;
     
-    // Print indentation
-    for (int i = 0; i < indent; i++) {
-        printf("  ");
-    }
+    ast_log_indent(indent);
     
     // Print the node based on its type
     switch (node->type) {
+        case T_CALL:
+            printf("CALL: %d\n", node->raw_value.number);
+            break;
+
         case T_NUMBER:
             printf("NUMBER: %d\n", node->raw_value.number);
             break;

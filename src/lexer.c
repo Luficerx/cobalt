@@ -130,6 +130,11 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
                     ++i;
                     continue;
                 }
+                        
+                if (c == '\n') {
+                    column += 1;
+                    pos = 0;
+                }
                 continue;
             };
 
@@ -168,6 +173,9 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
         // NOTE: At some degree it's safe to assume
         // this reads the first character of a sequence.
         
+        token.column = column;
+        token.line = pos;
+
         if (c == EOF) {
             token.lexeme = "EOF";
             token.kind = TK_EOF;
@@ -217,6 +225,9 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
             token = (Token){0};
             continue;
         }
+
+        token.column = 0;
+        token.line = 0;
     }
 
     SB_FREE(&sb);

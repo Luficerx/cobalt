@@ -5,12 +5,15 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#define COMPILER_FUNCTION_ERROR
+
 typedef struct Parser Parser;
 typedef enum TokenKind TokenKind;
 
 typedef enum ASTType {
     T_STMT,
     T_EXPR,
+    T_CALL,
 
     T_MDECLARATION,
     T_DECLARATION,
@@ -65,6 +68,7 @@ ASTNode *ast_parse_factor(Parser *parser);
 ASTNode *ast_parse_empty(Parser *parser);
 
 ASTNode *ast_parse_declaration(Parser *parser);
+ASTNode *ast_parse_call(Parser *parser);
 void ast_parse_declarator(ASTNodes *declarators, Parser *parser);
 ASTNode *ast_parse_assignment(Parser *parser);
 
@@ -82,6 +86,7 @@ ASTNode *ast_identifier_node(ASTNode *base_type, char *identifier);
 ASTNode *ast_hexadecimal_node(int number);
 ASTNode *ast_number_node(int number);
 ASTNode *ast_string_node(char *string);
+ASTNode *ast_empty_expr_node();
 
 ASTNode *ast_parse_primary(Parser *parser);
 ASTNodes *ast_new_declarators();

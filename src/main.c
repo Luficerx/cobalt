@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <assert.h>
-#include <stdlib.h>
+// #include <stdlib.h>
 
+#include "compiler.h"
 #include "parser.h"
 #include "lexer.h"
 #include "token.h"
@@ -15,6 +16,8 @@ void parse_file(const char *filepath) {
 int main(int argc, char **argv) {
     Lexer lexer;
     Parser parser;
+
+    log_compiler_version();
 
     shift_arg(argc, argv);
     
@@ -30,7 +33,9 @@ int main(int argc, char **argv) {
 
     if (!lexer_tokenize(&lexer, &parser)) return 1;
 
-    // parser_log_tokens(parser);
+    printf("──────────────────────────────\n");
+
+    parser_log_tokens(parser);
     
     printf("──────────────────────────────\n");
 
