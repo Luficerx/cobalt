@@ -10,6 +10,7 @@ char* token_kind_name(TokenKind kind) {
         case TK_NUMBER_LIT: return "NUMBER_LIT";
         case TK_STRING_LIT: return "STRING_LIT";
         case TK_HEX_LIT:    return "HEX_LIT";
+        case TK_STRAY:      return "STRAY";
         case TK_LSBRACE:    return "LSBRACE";
         case TK_RSBRACE:    return "RSBRACE";
         case TK_LPAREN:     return "LPAREN";

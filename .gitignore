@@ -1,5 +1,6 @@
 # Folders
 assembly/
+.vscode/
 .cache/
 debug/
 test/

@@ -2,5 +2,5 @@
 #include "compiler.h"
 
 void log_compiler_version() {
-    printf("version: %d.%d.%d\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
+    printf("cobalt version: %d.%d.%d\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
 }

@@ -1,52 +1,67 @@
 #include <stdio.h>
 #include <assert.h>
-// #include <stdlib.h>
+
+#define ARRAY_STRIP_PREFIX
+#include "array.h"
 
 #include "compiler.h"
 #include "parser.h"
 #include "lexer.h"
 #include "token.h"
 #include "core.h"
-#include "ast.h"
 
-void parse_file(const char *filepath) {
-    unused(filepath);
-}
+typedef struct Point { int x, y; } Point;
+
+typedef struct Points {
+    Point *items;
+    size_t size;
+    size_t len;
+} Points;
 
 int main(int argc, char **argv) {
     Lexer lexer;
     Parser parser;
 
-    log_compiler_version();
+    StringArray sa = {0};
+    const char *items;
+    
+    sa_append(&sa, "My string");
+    sa_expand(&sa, "This is my cool string i'm apprending to my cool buffer :)", "This is another string that I'll be also appending to the buffer :D");
+
+    sa_log(&sa);
 
     shift_arg(argc, argv);
     
     if (argc == 0) {
-        fprintf(stderr, "\033[0;31mfatal error:\033[0m no input files\n");
+        fprintf(stderr, CORE_RED"fatal error: "CORE_END"no input files\n");
         return 1;
     }
     
-    const char *ct_file = shift_arg(argc, argv);     
+    printf("──────────────────────────────\n");
+    
+    log_compiler_version();
+
+    printf("──────────────────────────────\n");
+
+    const char *ct_file = array_shift_arg(argc, argv);
 
     if (!lexer_init(&lexer, ct_file)) return 1;
     parser_init(&parser);
 
     if (!lexer_tokenize(&lexer, &parser)) return 1;
 
-    printf("──────────────────────────────\n");
-
     parser_log_tokens(parser);
     
     printf("──────────────────────────────\n");
 
-    ASTNode *it;
-    while (ast_token(&parser).kind != TK_EOF) {
-        if (parser.pos > 0) printf("\n");
-        it = ast_parse_stmt(&parser);
-        ast_log(it, 0);
-    }
+    // ASTNode *it;
+    // while (ast_token(&parser).kind != TK_EOF) {
+    //     if (parser.pos > 0) printf("\n");
+    //     it = ast_parse_stmt(&parser);
+    //     ast_log(it, 0);
+    // }
 
-    printf("──────────────────────────────\n");
+    // printf("──────────────────────────────\n");
 
     // lexer_destroy(&lexer);
     // parser_destroy(&parser);

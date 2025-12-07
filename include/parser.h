@@ -2,15 +2,15 @@
 #define PARSER_H
 
 #include <stddef.h>
-#include <stdbool.h>
 
 typedef struct Token Token;
 typedef struct ASTNode ASTNode;
 
 typedef struct Parser {
     Token *items;
-    size_t count;
+    char **lines;
     size_t size;
+    size_t len;
     size_t pos;
 } Parser;
 

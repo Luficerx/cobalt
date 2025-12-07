@@ -1,7 +1,7 @@
-#include <stddef.h>
-
 #ifndef TOKEN_H
 #define TOKEN_H
+
+#include <stddef.h>
 
 typedef enum TokenKind {
     // Literals & Identifiers
@@ -10,7 +10,17 @@ typedef enum TokenKind {
     TK_NUMBER_LIT, // 69, 420
     TK_STRING_LIT, // "Hello World"
     TK_HEX_LIT,    // 0x181818 Tsoding background color theme
+    TK_STRAY,      // Stray /
     
+/*  
+    NOTE: (25-12-06 12:43:49)
+    > Should type qualifiers be part of token kind at tokenization type?
+
+    // Qualifiers 
+    TK_INLINE,
+    TK_CONST,
+*/
+
     // Delimiters
     TK_LSBRACE,   // [
     TK_RSBRACE,   // ]
@@ -72,9 +82,12 @@ typedef enum TokenMode {
     TM_NONE = 0,
     TM_STRING_LIT,
     TM_NUMBER_LIT,
+    // HEXADECIMAL
     TM_HEX_LIT,
-    TM_MCOMMENT, // MULTI COMMENT
-    TM_COMMENT,  // SINGLE COMMENT
+    // MULTI COMMENT
+    TM_MCOMMENT,
+    // SINGLE COMMENT
+    TM_COMMENT,
     TM_GENERIC,
 } TokenMode;
 

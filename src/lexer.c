@@ -7,28 +7,28 @@
 #include "parser.h"
 #include "token.h"
 #include "core.h"
-#include "sb.h"
-#include "da.h"
+#include "array.h"
 
 bool lexer_load_source(Lexer *lexer, const char *filepath) {
     FILE *fptr;
 
     if ((fptr = fopen(filepath, "r")) == NULL) {
-        fprintf(stderr, "\033[0;31mfatal error:\033[0m could not read file %s\n", filepath);
+        fprintf(stderr, CORE_RED"fatal error: "CORE_END"could not read file %s\n", filepath);
         return false;
     }
     
     char c;
 
     for (c = fgetc(fptr); c != EOF; c = fgetc(fptr)) {
-        SB_PUSH_CHAR(&lexer->source, c);
+        sb_append(&lexer->source, c);
     }
 
     // Push EOF into the string;
-    SB_PUSH_CHAR(&lexer->source, c);
+    sb_append(&lexer->source, c);
 
-    if (lexer->source.length == 0) {
-        fprintf(stderr, "\033[0;31mfatal error:\033[0m file is empty: %s\n", filepath);
+    // Assumes that we only found EOF.
+    if (lexer->source.len == 1) {
+        fprintf(stderr, CORE_RED"fatal error: "CORE_END"file is empty: %s\n", filepath);
         return false;
     }
 
@@ -47,10 +47,11 @@ bool lexer_init(Lexer *lexer, const char *filepath) {
 }
 
 void lexer_destroy(Lexer *lexer) {
-    free(lexer->source.string);
+    free(lexer->source.items);
 }
 
 bool lexer_tokenize(Lexer *lexer, Parser *parser) {
+    StringBuilder line = {0};
     StringBuilder sb = {0};
     Token token = {0};
     TokenMode mode = 0;
@@ -58,68 +59,84 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
     size_t column = 1;
     size_t pos = 0;
     
-    for (size_t i = 0; i < lexer->source.length; ++i) {
-        char c = lexer->source.string[i];
+    for (size_t i = 0; i < lexer->source.len; ++i) {
+        char c = lexer->source.items[i];
         ++pos;
 
+        /*  HACK: (25-12-05 22:30:36)
+            Construct the line for reporting purposes, dumb approach!
+        */
+        sb_append(&line, c);
+        
         switch (mode) {
             case TM_NONE: break;
-            case TM_STRING_LIT: { 
-                if (c == '\n') {
-                    SB_PUSH_CHAR(&sb, '\0');
-                    fprintf(stderr, "%s\n", sb.string);
+            case TM_STRING_LIT: {
+                /*  NOTE: (25-12-05 20:32:04)
+                    I have a feeling the second checking here can bring problems in the future */
+
+                if (c == '\n' || c == EOF) {
+                    sb_append(&sb, '\0');
+                    fprintf(stderr, "%s", line.items);
+                    fprintf(stderr, "%*s^\n", (int)pos-1, "~~~");
                     fprintf(stderr, "%s:%ld:%ld"CORE_RED" fatal error: "CORE_END"Unterminated string literal\n", lexer->file, column, pos);
                     return false;
                 }
-                if ((sb.string[0] == '"' && c == '"') || (sb.string[0] == '\'' && c == '\'')) {
-                    SB_PUSH_CHAR(&sb, c);
-                    SB_PUSH_CHAR(&sb, '\0');
-                    token.lexeme = strdup(sb.string);
+
+                if (c == '\\') {
+                    sb_append(&sb, '\\');
+                    lexer_advance(&sb, lexer->source, &i);
+                    continue;
+                }
+
+                if ((sb.items[0] == '"' && c == '"') || (sb.items[0] == '\'' && c == '\'')) {
+                    sb_append(&sb, c);
+                    sb_append(&sb, '\0');
+                    token.lexeme = strdup(sb.items);
                     token.kind = TK_STRING_LIT;
                     
-                    DA_APPEND(parser, token);
-                    SB_CLEAR(&sb);
+                    array_append(parser, token);
+                    sb_clear(&sb);
                     
                     token = (Token){0};
                     mode = TM_NONE;
                     continue;
                 }
-                SB_PUSH_CHAR(&sb, c);
+                sb_append(&sb, c);
                 continue;
             }
 
             case TM_NUMBER_LIT: {
-                if (!isdigit(c) && c != '_' && sb.string[sb.length] != 'f' && c !='f') {
-                    SB_PUSH_CHAR(&sb, '\0');
-                    token.lexeme = strdup(sb.string);
+                if (!isdigit(c) && c != '_' && sb.items[sb.len] != 'f' && c != 'f') {
+                    sb_append(&sb, '\0');
+                    token.lexeme = strdup(sb.items);
                     token.kind = TK_NUMBER_LIT;
                     
-                    DA_APPEND(parser, token);
-                    SB_CLEAR(&sb);
+                    array_append(parser, token);
+                    sb_clear(&sb);
                     
                     token = (Token){0};
                     mode = TM_NONE;
                     break;
                 } else {
-                    SB_PUSH_CHAR(&sb, c);
+                    sb_append(&sb, c);
                     continue;
                 }
             }
 
             case TM_HEX_LIT: {
                 if (!lexer_char_in_az(c) && !lexer_char_in_09(c)) {
-                    SB_PUSH_CHAR(&sb, '\0');
-                    token.lexeme = strdup(sb.string);
+                    sb_append(&sb, '\0');
+                    token.lexeme = strdup(sb.items);
                     token.kind = TK_HEX_LIT;
                     
-                    DA_APPEND(parser, token);
-                    SB_CLEAR(&sb);
+                    array_append(parser, token);
+                    sb_clear(&sb);
                     
                     token = (Token){0};
                     mode = TM_NONE;
                     break;
                 } else {
-                    SB_PUSH_CHAR(&sb, c);
+                    sb_append(&sb, c);
                     continue;        
                 }
             }
@@ -140,7 +157,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
 
             case TM_COMMENT: {
                 if ((lexer_next_char_is(lexer->source, i, EOF))) {
-                    SB_PUSH_CHAR(&sb, c);
+                    sb_append(&sb, c);
                     mode = TM_NONE;
                 }
 
@@ -151,27 +168,28 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
 
             case TM_GENERIC: {
                 if (!lexer_char_in_az(c) && !lexer_char_in_09(c) && (c != '_')) {
-                    SB_PUSH_CHAR(&sb, '\0');
-                    token.lexeme = strdup(sb.string);
+                    sb_append(&sb, '\0');
+                    token.lexeme = strdup(sb.items);
                     if (!lexer_lexeme_is_keyword(&token)) {
                         token.kind = TK_IDENTIFIER;
                     }
                     
-                    DA_APPEND(parser, token);
-                    SB_CLEAR(&sb);
+                    array_append(parser, token);
+                    sb_clear(&sb);
                     
                     token = (Token){0};
                     mode = TM_NONE;
                     break;
                 } else {
-                    SB_PUSH_CHAR(&sb, c);
+                    sb_append(&sb, c);
                     continue;
                 }
             }
         }
         
-        // NOTE: At some degree it's safe to assume
-        // this reads the first character of a sequence.
+        /*  NOTE: (25-11-03 15:29:08)
+            At some degree it's safe to assume
+        */
         
         token.column = column;
         token.line = pos;
@@ -180,28 +198,29 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
             token.lexeme = "EOF";
             token.kind = TK_EOF;
 
-            DA_APPEND(parser, token);
+            array_append(parser, token);
             token = (Token){0};
             continue;
         }
-        
+
         if (isdigit(c)) {
-            SB_PUSH_CHAR(&sb, c);
-            
+            sb_append(&sb, c);
+
             if (c == '0' && lexer_next_char_is(lexer->source, i, 'x')) mode = TM_HEX_LIT;
             else mode = TM_NUMBER_LIT;
             continue;
         }
-        
+
         if (c == '"' || c == '\'') {
-            SB_PUSH_CHAR(&sb, c);
+            sb_append(&sb, c);
             mode = TM_STRING_LIT;
             continue;
         }
-        
+
         if (c == '\n') {
             column += 1;
             pos = 0;
+            sb_clear(&line);
         }
 
         if (c == '/' && lexer_next_char_is(lexer->source, i, '/')) {
@@ -215,13 +234,13 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
         }
 
         if (lexer_char_in_az(c) || c == '_') {
-            SB_PUSH_CHAR(&sb, c);
+            sb_append(&sb, c);
             mode = TM_GENERIC;
             continue;
         }
 
         if (lexer_char_is(lexer->source, &sb, &token, c, &i, &mode)) {
-            DA_APPEND(parser, token);
+            array_append(parser, token);
             token = (Token){0};
             continue;
         }
@@ -230,7 +249,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
         token.line = 0;
     }
 
-    SB_FREE(&sb);
+    sb_clear(&sb);
     return true;
 }
 
@@ -356,7 +375,7 @@ bool lexer_char_is(StringBuilder source, StringBuilder *sb, Token *token, char c
                 ++(*i);
 
             } else if (lexer_next_char_in_09(source, *i)) {
-                SB_PUSH_CHAR(sb, c);
+                sb_append(sb, c);
                 *mode = TM_NUMBER_LIT;
                 return false;
 
@@ -435,12 +454,17 @@ bool lexer_char_is(StringBuilder source, StringBuilder *sb, Token *token, char c
             }
             return true;
         }
+        case '\\': {
+            token->lexeme = "\\";
+            token->kind = TK_STRAY;
+            return true;
+        }
     }
     return false;
 }
 
 void lexer_advance(StringBuilder *sb, StringBuilder sc, size_t *i) {
-    SB_PUSH_CHAR(sb, sc.string[++(*i)]);
+    sb_append(sb, sc.items[++(*i)]);
 }
 
 bool lexer_char_in_az(char c) {
@@ -452,8 +476,8 @@ bool lexer_char_in_09(char c) {
 }
 
 bool lexer_next_char_in_09(StringBuilder sb, size_t i) {
-    if (i >= sb.length) return false;
-    char c = sb.string[i+1];
+    if (i >= sb.len) return false;
+    char c = sb.items[i+1];
     return lexer_char_in_09(c);
 }
 
@@ -462,23 +486,23 @@ bool lexer_lexeme_is_keyword(Token *token) {
     strcmp("static", token->lexeme) == 0 ||
     strcmp("sizeof", token->lexeme) == 0 ||
     strcmp("return", token->lexeme) == 0 ||
-    strcmp("const", token->lexeme)  == 0 ||
     strcmp("macro", token->lexeme) == 0 ||
+    strcmp("const", token->lexeme) == 0 ||
 
-    strcmp("if", token->lexeme)  == 0 ||
-    strcmp("elif", token->lexeme)  == 0 ||
-    strcmp("else", token->lexeme)  == 0 ||
-    strcmp("pass", token->lexeme)  == 0) {
-            token->kind = TK_KEYWORD;
-            return true;
+    strcmp("if", token->lexeme) == 0 ||
+    strcmp("elif", token->lexeme) == 0 ||
+    strcmp("else", token->lexeme) == 0 ||
+    strcmp("pass", token->lexeme) == 0) {
+        token->kind = TK_KEYWORD;
+        return true;
     }
     
     return false;
 }
 
 bool lexer_next_char_is(StringBuilder sb, size_t i, char target) {
-    if (i >= sb.length) return false;
-    return (sb.string[i+1] == target);
+    if (i >= sb.len) return false;
+    return (sb.items[i+1] == target);
 }
 
 bool lexer_char_space_or_nline(char c) {
@@ -490,7 +514,7 @@ void lexer_log(Lexer lexer) {
     printf("  file - %s\n", lexer.file);
     printf("  pos - %ld\n", lexer.pos);
     printf("Lexer Source:\n");
-    printf("  length - %ld\n", lexer.source.length);
+    printf("  length - %ld\n", lexer.source.len);
     printf("  bytes - %ld\n", lexer.source.size);
 }
 

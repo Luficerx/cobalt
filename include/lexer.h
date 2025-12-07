@@ -1,10 +1,10 @@
 #ifndef LEXER_H
 #define LEXER_H
 
-#include <stddef.h>
 #include <stdbool.h>
+#include "array.h"
 
-#include "sb.h"
+#define TOKEN(token) token = (Token){0}
 
 typedef struct Parser Parser;
 typedef struct Token Token;
@@ -24,6 +24,7 @@ bool lexer_init(Lexer *lexer, const char *filepath);
 void lexer_destroy(Lexer *lexer);
 
 bool lexer_char_is(StringBuilder source, StringBuilder *sb, Token *token, char c, size_t *i, TokenMode *mode);
+/* Append the character to `sb` and advances de cursor to the next char */
 void lexer_advance(StringBuilder *sb, StringBuilder sc, size_t *i);
 bool lexer_char_in_az(char c);
 bool lexer_char_in_09(char c);
