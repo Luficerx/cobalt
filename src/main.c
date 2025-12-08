@@ -22,14 +22,6 @@ int main(int argc, char **argv) {
     Lexer lexer;
     Parser parser;
 
-    StringArray sa = {0};
-    const char *items;
-    
-    sa_append(&sa, "My string");
-    sa_expand(&sa, "This is my cool string i'm apprending to my cool buffer :)", "This is another string that I'll be also appending to the buffer :D");
-
-    sa_log(&sa);
-
     shift_arg(argc, argv);
     
     if (argc == 0) {
