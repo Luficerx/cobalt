@@ -10,14 +10,6 @@
 #include "token.h"
 #include "core.h"
 
-typedef struct Point { int x, y; } Point;
-
-typedef struct Points {
-    Point *items;
-    size_t size;
-    size_t len;
-} Points;
-
 int main(int argc, char **argv) {
     Lexer lexer;
     Parser parser;
