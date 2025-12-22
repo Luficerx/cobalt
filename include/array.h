@@ -37,29 +37,11 @@ do {                                                                            
     }                                                                                      \
 } while (0)
 
-// Macro to get the type by taking the first value of __VA_ARGS__
-#define TYPEOF_VA_ARGS(arg, ...) typeof(arg)
-
 // Appends an element to the array.
 #define array_append(array, elem)            \
 do {                                         \
     array_init((array), (array)->len+1);     \
     (array)->items[(array)->len++] = (elem); \
-} while (0)
-
-/*  
-    HACK: (25-12-07 10:56:32) 
-    > Type unsafe because you can't ensure which type is passed to the variadics(?)
-    > Theoretically it's job of the compiler to ensure what type is given to __VA_ARGS__
-       and fail at compilation in the case of missmatch type. 
-*/
-// Appends many elements to array
-#define array_extend(array, ...)                         \
-do {                                                     \
-    TYPEOF_VA_ARGS(__VA_ARGS__) items[] = {__VA_ARGS__}; \
-    for (size_t i = 0; i < array_len((items)); ++i) {    \
-        array_append((array), items[i]);                 \
-    }                                                    \
 } while (0)
 
 // Extend the array with items
