@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "array.h"
+#include "arena.h"
 
 #define TOKEN(token) token = (Token){0}
 
@@ -12,6 +13,7 @@ typedef enum TokenMode TokenMode;
 
 typedef struct Lexer {
     StringBuilder source;
+    StringArena *sa;
     const char *file;
     size_t pos;
 } Lexer;

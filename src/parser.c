@@ -22,8 +22,10 @@ void parser_log(Parser parser) {
 }
 
 void parser_log_tokens(Parser parser) {
+    size_t n = parser.len > 16 ? 16 : parser.len;
+
     printf("Tokens found: %ld\n", parser.len);
-    for (size_t i = 0; i < parser.len; ++i) {
+    for (size_t i = 0; i < n; ++i) {
         printf(CORE_DARK_GREY"...."CORE_END);
         token_log(parser.items[i]);
     }

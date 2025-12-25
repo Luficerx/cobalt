@@ -8,6 +8,7 @@
 #include "token.h"
 #include "core.h"
 #include "array.h"
+#include "arena.h"
 
 bool lexer_load_source(Lexer *lexer, const char *filepath) {
     FILE *fptr;
@@ -38,6 +39,7 @@ bool lexer_load_source(Lexer *lexer, const char *filepath) {
 
 bool lexer_init(Lexer *lexer, const char *filepath) {
     lexer->source = (StringBuilder){0};
+    lexer->sa = sa_init();
     lexer->file = filepath;
     lexer->pos = 0;
     
@@ -48,6 +50,7 @@ bool lexer_init(Lexer *lexer, const char *filepath) {
 
 void lexer_destroy(Lexer *lexer) {
     free(lexer->source.items);
+    sa_destroy(lexer->sa);
 }
 
 bool lexer_tokenize(Lexer *lexer, Parser *parser) {
@@ -91,7 +94,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
                 if ((sb.items[0] == '"' && c == '"') || (sb.items[0] == '\'' && c == '\'')) {
                     sb_append(&sb, c);
                     sb_append(&sb, '\0');
-                    token.lexeme = strdup(sb.items);
+                    token.lexeme = sa_dup(lexer->sa, sb.items);
                     token.kind = TK_STRING_LIT;
                     
                     array_append(parser, token);
@@ -108,7 +111,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
             case TM_NUMBER_LIT: {
                 if (!isdigit(c) && c != '_' && sb.items[sb.len] != 'f' && c != 'f') {
                     sb_append(&sb, '\0');
-                    token.lexeme = strdup(sb.items);
+                    token.lexeme = sa_dup(lexer->sa, sb.items);
                     token.kind = TK_NUMBER_LIT;
                     
                     array_append(parser, token);
@@ -126,7 +129,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
             case TM_HEX_LIT: {
                 if (!lexer_char_in_az(c) && !lexer_char_in_09(c)) {
                     sb_append(&sb, '\0');
-                    token.lexeme = strdup(sb.items);
+                    token.lexeme = sa_dup(lexer->sa, sb.items);
                     token.kind = TK_HEX_LIT;
                     
                     array_append(parser, token);
@@ -169,7 +172,7 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
             case TM_GENERIC: {
                 if (!lexer_char_in_az(c) && !lexer_char_in_09(c) && (c != '_')) {
                     sb_append(&sb, '\0');
-                    token.lexeme = strdup(sb.items);
+                    token.lexeme = sa_dup(lexer->sa, sb.items);
                     if (!lexer_lexeme_is_keyword(&token)) {
                         token.kind = TK_IDENTIFIER;
                     }

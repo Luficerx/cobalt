@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
 
     // printf("──────────────────────────────\n");
 
-    // lexer_destroy(&lexer);
+    lexer_destroy(&lexer);
     // parser_destroy(&parser);
     return 0;
 }

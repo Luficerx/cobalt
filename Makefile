@@ -2,8 +2,9 @@ CC = gcc
 PROG_NAME = cobalt
 PROG = bin/$(PROG_NAME)
 
+CTFLAGS = -DTRACK_ARENA_ALLOCATION
 CFLAGS_EXTRA = -Wall -Wextra -g #-O3
-CFLAGS = -I./include -L./lib/ $(CFLAGS_EXTRA)
+CFLAGS = -I./include -L./lib/ $(CFLAGS_EXTRA) $(CTFLAGS)
 
 SRC = $(wildcard ./src/*.c)
 

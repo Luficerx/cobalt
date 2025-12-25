@@ -86,7 +86,6 @@ do {                                         \
     #define len array_len
 
     #define append array_append
-    #define extend array_extend
     #define expand array_expand
 
     #define last array_last
@@ -102,7 +101,7 @@ typedef struct StringArray {
 } StringArray;
 
 // Prints every string in the array.
-#define sa_log(array)                           \
+#define sb_log(array)                           \
 do {                                            \
     for (size_t i = 0; i < (array)->len; ++i) { \
         printf("%s\n", (array)->items[i]);      \
@@ -110,10 +109,10 @@ do {                                            \
 } while (0)
 
 // Expand the array with items by the length
-#define sa_expand(array, ...) sa_expandn((array), ((const char*[]){__VA_ARGS__}), sizeof(((const char*[]){__VA_ARGS__}))/sizeof(const char*))
+#define sb_expand(array, ...) sb_expandn((array), ((const char*[]){__VA_ARGS__}), sizeof(((const char*[]){__VA_ARGS__}))/sizeof(const char*))
 
 // Expand the array with items by the length
-#define sa_expandn(array, nitems, nlength)                                                \
+#define sb_expandn(array, nitems, nlength)                                                \
 do {                                                                                      \
     array_init((array), (array)->len + (nlength));                                        \
     memcpy((array)->items + (array)->len, (nitems), (nlength) * sizeof(*(array)->items)); \
@@ -132,9 +131,6 @@ typedef struct StringBuilder {
 // Print the string in StringBuilder.
 #define sb_print(array) printf("%s\n", (array)->items)
 
-// Frees the memory of the StringBuilder.
-#define sb_free(array)
-
 // Clears the StringBuilder and sets it's length to 0
 #define sb_clear(array)                       \
 do {                                          \
@@ -145,6 +141,5 @@ do {                                          \
 /* ----------------------------------------- SECTION: Aliases ----------------------------------------- */
 
 #define sb_append array_append
-#define sa_append array_append
 
 #endif // ARRAY_H
