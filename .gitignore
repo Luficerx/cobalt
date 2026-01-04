@@ -8,6 +8,8 @@ test/
 bin/
 old/
 
-.ccls
-.clangd
+test.sh
 run.sh
+
+.clangd
+.ccls

@@ -7,11 +7,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-/* ----------------------------------------- SECTION: Utilities ----------------------------------------- */ 
-
-// Cast to void.
-#define dead(t) (void)t
-
 /* ----------------------------------------- SECTION: Array Generics ----------------------------------------- */
 /*  
     NOTE: (25-12-06 21:08:59)
@@ -67,7 +62,15 @@ do {                                                                            
 // Return the last arg from the array.
 #define array_last(array) (assert((array)->len > 0 && "Length of given array is less or equal to zero."), (array)->items[(array)->len-1])
 
-// Prints the basic data in the array.
+// Free the memory and set fields to zero.
+#define array_free(array) \
+do {                      \
+    free((array)->items); \
+    (array)->size = 0;    \
+    (array)->len = 0;     \
+} while (0)
+
+// Print the basic data in the array.
 #define array_log(array)                     \
 do {                                         \
     printf("Pointer: %p\n", (array)->items); \
@@ -100,7 +103,7 @@ typedef struct StringArray {
     size_t len;
 } StringArray;
 
-// Prints every string in the array.
+// Print every string in the array.
 #define sb_log(array)                           \
 do {                                            \
     for (size_t i = 0; i < (array)->len; ++i) { \

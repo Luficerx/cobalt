@@ -79,15 +79,20 @@ typedef enum TokenKind {
 } TokenKind;
 
 typedef enum TokenMode {
-    TM_NONE = 0,
+    TM_NONE,
+    
     TM_STRING_LIT,
     TM_NUMBER_LIT,
+
     // HEXADECIMAL
     TM_HEX_LIT,
-    // MULTI COMMENT
-    TM_MCOMMENT,
+
     // SINGLE COMMENT
     TM_COMMENT,
+
+    // MULTI COMMENT
+    TM_MCOMMENT,
+
     TM_GENERIC,
 } TokenMode;
 
@@ -100,6 +105,10 @@ typedef struct Token {
 
 // FORWARD DECLARATION
 
-char* token_kind_name(TokenKind kind);
+// Retuns a string equivalent to the kind in `TokenKind` struct.
+const char* token_kind_name(TokenKind kind);
+
+// Print the kind and the lexeme of the token.
 void token_log(Token token);
+
 #endif // TOKEN_H

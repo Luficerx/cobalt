@@ -1,7 +1,79 @@
 #include <string.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include "arena.h"
+#include "core.h"
+
+Arena *arena_init(Arena *arena) {
+    size_t size = (ARENA_DEFAULT_CAPACITY * ARENA_DEFAULT_CAPACITY);
+    
+    ArenaRegion *region_ptr = malloc(sizeof(*region_ptr));
+    if (region_ptr == NULL) THROW("Could not malloc ArenaRegion.");
+    
+    region_ptr->ptr = malloc(size);
+    if (region_ptr->ptr == NULL) THROW("Could not malloc ArenaRegion.");
+   
+    region_ptr->use = region_ptr->ptr;
+    region_ptr->top = region_ptr->ptr + size;
+    region_ptr->next = NULL;
+    
+    arena->ptr = region_ptr;
+    arena->use = region_ptr;
+    arena->allocs = 1;
+    return arena;
+}
+
+Arena *arena_sized_init(Arena *arena, size_t size) {
+    DEAD(arena);
+    DEAD(size);
+    NOIMPL(); 
+}
+
+void *arena_align(void *ptr, size_t align) {
+    uintptr_t iptr = (uintptr_t)ptr;
+    size_t rest = iptr % align;
+    if (rest != 0) { iptr += align - rest; }
+    return (void*)iptr;
+}
+
+void *arena_alloc(Arena *arena, size_t bytes, size_t align) {
+    ArenaRegion *region = arena->use;
+    void *ptr = arena_align(region->use, align);
+
+    if ((ArenaPtr)ptr + bytes > region->top) {
+        size_t region_size = (ARENA_DEFAULT_CAPACITY * ARENA_DEFAULT_CAPACITY);
+        
+        if (region_size < 2) THROW("ARENA_DEFAULT_CAPACITY must be >= 2.");
+
+        ArenaRegion *new_region = malloc(sizeof(*new_region));
+        new_region->ptr = malloc(region_size);
+        new_region->use = new_region->ptr;
+        new_region->top = new_region->ptr + region_size;
+        new_region->next = NULL;
+
+        region->next = new_region;
+        arena->use = new_region;
+        ptr = new_region->ptr;
+        region = new_region;
+        arena->allocs++;
+    }
+
+    region->use = (ArenaPtr)ptr + bytes;
+    return ptr;
+}
+
+void arena_destroy(Arena *arena) {
+    ArenaRegion *region = arena->ptr;
+    while (region) {
+        ArenaRegion *next_ptr = region->next;
+        free(region->ptr);
+        free(region);
+        region = next_ptr;
+    }
+}
+
+void arena_log(Arena arena) { DEAD(arena); NOIMPL(); }
 
 StringArena *sa_init() {
     StringArena *sa = malloc(sizeof(*sa));
@@ -35,7 +107,7 @@ void sa_clear(StringArena *sa) {
 
 char *sa_dup(StringArena *sa, char *raw_string) {
     size_t len = strlen(raw_string) + 1; // +1 Include null terminator
-    string_arena_init(sa, sa->used + len);
+    sa_prep(sa, sa->used + len);
     
     char *string = sa->items + sa->used; // Points at the end of used memory
     memcpy(string, raw_string, len);

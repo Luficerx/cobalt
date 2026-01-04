@@ -3,7 +3,7 @@
 #include "token.h"
 #include "core.h"
 
-char* token_kind_name(TokenKind kind) {
+const char* token_kind_name(TokenKind kind) {
     switch (kind) {
         case TK_IDENTIFIER: return "IDENTIFIER";
         case TK_KEYWORD:    return "KEYWORD";

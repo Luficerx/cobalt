@@ -5,10 +5,27 @@
 
 #include "lexer.h"
 #include "parser.h"
-#include "token.h"
 #include "core.h"
-#include "array.h"
-#include "arena.h"
+
+bool lexer_init(Lexer *lexer, const char *filepath) {
+    lexer->source = (StringBuilder){0};
+    lexer->sa = sa_init();
+    lexer->file = filepath;
+    lexer->pos = 0;
+    
+    if (!lexer_load_source(lexer, filepath)) return false;
+    
+    return true;
+}
+
+void lexer_destroy(Lexer *lexer) {
+    array_free(&lexer->source);
+    sa_destroy(lexer->sa);
+
+    lexer->sa = NULL;
+    lexer->file = NULL;
+    lexer->pos = 0;
+}
 
 bool lexer_load_source(Lexer *lexer, const char *filepath) {
     FILE *fptr;
@@ -35,22 +52,6 @@ bool lexer_load_source(Lexer *lexer, const char *filepath) {
 
     fclose(fptr);
     return true;
-}
-
-bool lexer_init(Lexer *lexer, const char *filepath) {
-    lexer->source = (StringBuilder){0};
-    lexer->sa = sa_init();
-    lexer->file = filepath;
-    lexer->pos = 0;
-    
-    if (!lexer_load_source(lexer, filepath)) return false;
-
-    return true;
-}
-
-void lexer_destroy(Lexer *lexer) {
-    free(lexer->source.items);
-    sa_destroy(lexer->sa);
 }
 
 bool lexer_tokenize(Lexer *lexer, Parser *parser) {
@@ -254,6 +255,10 @@ bool lexer_tokenize(Lexer *lexer, Parser *parser) {
 
     sb_clear(&sb);
     return true;
+}
+
+void lexer_advance(StringBuilder *sb, StringBuilder sc, size_t *i) {
+    sb_append(sb, sc.items[++(*i)]);
 }
 
 bool lexer_char_is(StringBuilder source, StringBuilder *sb, Token *token, char c, size_t *i, TokenMode *mode) {
@@ -466,12 +471,17 @@ bool lexer_char_is(StringBuilder source, StringBuilder *sb, Token *token, char c
     return false;
 }
 
-void lexer_advance(StringBuilder *sb, StringBuilder sc, size_t *i) {
-    sb_append(sb, sc.items[++(*i)]);
+bool lexer_char_space_or_nline(char c) {
+    return (c == ' ' || c == '\n');
 }
 
 bool lexer_char_in_az(char c) {
     return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
+}
+
+bool lexer_next_char_is(StringBuilder sb, size_t i, char target) {
+    if (i >= sb.len) return false;
+    return (sb.items[i+1] == target);
 }
 
 bool lexer_char_in_09(char c) {
@@ -486,30 +496,21 @@ bool lexer_next_char_in_09(StringBuilder sb, size_t i) {
 
 bool lexer_lexeme_is_keyword(Token *token) {
     if (strcmp("import", token->lexeme) == 0 ||
-    strcmp("static", token->lexeme) == 0 ||
-    strcmp("sizeof", token->lexeme) == 0 ||
-    strcmp("return", token->lexeme) == 0 ||
-    strcmp("macro", token->lexeme) == 0 ||
-    strcmp("const", token->lexeme) == 0 ||
+        strcmp("static", token->lexeme) == 0 ||
+        strcmp("sizeof", token->lexeme) == 0 ||
+        strcmp("return", token->lexeme) == 0 ||
+        strcmp("macro", token->lexeme) == 0 ||
+        strcmp("const", token->lexeme) == 0 ||
 
-    strcmp("if", token->lexeme) == 0 ||
-    strcmp("elif", token->lexeme) == 0 ||
-    strcmp("else", token->lexeme) == 0 ||
-    strcmp("pass", token->lexeme) == 0) {
+        strcmp("if", token->lexeme) == 0 ||
+        strcmp("elif", token->lexeme) == 0 ||
+        strcmp("else", token->lexeme) == 0 ||
+        strcmp("pass", token->lexeme) == 0) {
         token->kind = TK_KEYWORD;
         return true;
     }
     
     return false;
-}
-
-bool lexer_next_char_is(StringBuilder sb, size_t i, char target) {
-    if (i >= sb.len) return false;
-    return (sb.items[i+1] == target);
-}
-
-bool lexer_char_space_or_nline(char c) {
-    return (c == ' ' || c == '\n');
 }
 
 void lexer_log(Lexer lexer) {

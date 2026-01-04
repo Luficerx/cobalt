@@ -8,7 +8,6 @@ typedef struct ASTNode ASTNode;
 
 typedef struct Parser {
     Token *items;
-    char **lines;
     size_t size;
     size_t len;
     size_t pos;
@@ -43,10 +42,24 @@ typedef enum PrecedenceOps {
 } PrecedenceOps;
 
 // FORWARD DECLARATION
+
+/*
+    Set default fields for the `Parser` struct and allocates `n` bytes to `Parser.items`.
+    Initially allocates `sizeof(*parser->items) * 256`.
+    The array will resize as new entries are added if the limit was reached
+*/
 void parser_init(Parser *parser);
+
+// Free the memory allocated in `Parser.items` and set the rest of the fields to 0.
 void parser_destroy(Parser *parser);
 
+// Print basic information about `Parser` struct.
 void parser_log(Parser parser);
+
+// Print all tokens in `Parser.items`
 void parser_log_tokens(Parser parser);
+
+// Print `n` amount of tokens in `Parser.items`
+void parser_log_ntokens(Parser parser, size_t n);
 
 #endif // PARSER_H
